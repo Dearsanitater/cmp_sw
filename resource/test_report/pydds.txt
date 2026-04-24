@@ -1,0 +1,7 @@
+A               R TCR
+A                 ID             9B
+A                 NAME          20A
+A                 DEPT         100A
+A                 SALARY         7P 2
+A                 AGE            9B
+A                 SEX           10A

@@ -1,0 +1,50 @@
+“比对内核 + 数据源插件 + Web 管理层” 三层，绝不让 Django 直接碰数据库驱动、进程、HBase、比对细节。
+
+datadiff/
+├─ core/                         # 纯比对内核，不依赖 Django
+│  ├─ models.py                  # TableSchema / Column / Row / CompareResult
+│  ├─ normalizers.py             # 类型标准化：number/datetime/binary/sql_variant/spatial
+│  ├─ rules.py                   # 比对规则：严格/宽松/忽略列/精度容忍
+│  ├─ comparator.py              # 行比对、hash比对、schema比对
+│  ├─ planner.py                 # 根据源/目标生成比对计划
+│  └─ report.py                  # 差异结果结构化输出
+│
+├─ connectors/                   # 数据源插件层
+│  ├─ base.py                    # BaseConnector 抽象类
+│  ├─ registry.py                # 注册 mysql/sqlserver/hbase/hdfs/as400
+│  ├─ sqlserver.py
+│  ├─ mysql.py
+│  ├─ oracle.py
+│  ├─ db2.py
+│  ├─ as400.py
+│  ├─ hbase.py
+│  ├─ hdfs.py
+│  └─ doris.py
+│
+├─ execution/                    # 任务执行层
+│  ├─ job.py                     # CompareJob
+│  ├─ runner.py                  # JobRunner
+│  ├─ state.py                   # running/paused/stopping/failed/finished
+│  ├─ events.py                  # 日志事件、进度事件
+│  └─ cancellation.py            # stop/pause/resume
+│
+├─ storage/                      # 持久化
+│  ├─ models.py                  # SQLAlchemy/Django ORM 模型
+│  ├─ repository.py              # RuleRepository / JobRepository
+│  └─ config_store.py            # 数据源配置存储，禁止直接写 ini
+│
+├─ web/                          # Django/FastAPI 只做接口
+│  ├─ views.py
+│  ├─ serializers.py
+│  ├─ urls.py
+│  └─ websocket.py
+│
+├─ workers/                      # 独立 worker
+│  ├─ compare_worker.py
+│  └─ hbase_worker.py
+│
+├─ tests/
+│  ├─ unit/
+│  ├─ integration/
+│  └─ fixtures/
+└─ main.py

@@ -209,6 +209,21 @@ class ergodic_database():
             if owns_connector:
                 self._release_compare_connector(role, connector, broken=broken)
 
+    def _load_table_columns_pair(self, table_name, src_columns, tgt_columns):
+        if src_columns and tgt_columns:
+            return src_columns, tgt_columns
+
+        results = {'src': src_columns, 'tgt': tgt_columns}
+        tasks = {}
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            if not src_columns:
+                tasks[executor.submit(self._load_table_columns, table_name, 'src')] = 'src'
+            if not tgt_columns:
+                tasks[executor.submit(self._load_table_columns, table_name, 'tgt')] = 'tgt'
+            for future, role in tasks.items():
+                results[role] = future.result()
+        return results['src'], results['tgt']
+
     def _collect_schema_from_connector(self, role):
         connector = self._acquire_compare_connector(role)
         broken = False
@@ -2169,8 +2184,6 @@ class ergodic_database():
             constraints_cost_ms = 0.0
             rows_cost_ms = 0.0
             try:
-                if self._uses_connector_backend():
-                    acquired = self._acquire_table_compare_connectors()
                 if self._check_control(f'表 {tab_name}'):
                     return {
                         'messages': list(self.bfe),
@@ -2180,11 +2193,9 @@ class ergodic_database():
                 print(f'表 {tab_name} 开始比对')
                 if self._uses_connector_backend():
                     columns_start = stime.monotonic()
-                    if not tab_col:
-                        tab_col = self._load_table_columns(tab_name, 'src')
-                    if not a:
-                        a = self._load_table_columns(tab_name, 'tgt')
+                    tab_col, a = self._load_table_columns_pair(tab_name, tab_col, a)
                     columns_cost_ms = (stime.monotonic() - columns_start) * 1000
+                    acquired = self._acquire_table_compare_connectors()
                 if len(a) == len(tab_col) or (self.tgt_db_t == 'hbase' and len(a) < len(tab_col)):
                     print('\033[0;34m %s \033[0m源备字段数相同，源端字段：%d \t备端字段%d' % (tab_name, len(tab_col), len(a)))
                     self.bfe.append('\033[0;34m %s \033[0m源备字段数相同，源端字段：%d \t备端字段%d' % (tab_name, len(tab_col), len(a)))

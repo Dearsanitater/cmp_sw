@@ -530,6 +530,98 @@ def hash_compare(s, t,col_type_list :list,tbname):
         "src_hashes": src_hashes,
         "tgt_hashes": tgt_hashes,
     }
+
+
+def hash_compare_rows(src_rows, tgt_rows, col_type_list: list, tbname, src_col_count=None, tgt_col_count=None):
+    messages = []
+    errors = []
+    src_hashes = []
+    tgt_hashes = []
+    src_hash_pool = Counter()
+    src_row_map = {}
+    src_hash_indexes = {}
+    src_records = []
+
+    src_row_count = len(src_rows)
+    tgt_row_count = len(tgt_rows)
+    if src_col_count is None:
+        src_col_count = len(src_rows[0]) if src_rows else 0
+    if tgt_col_count is None:
+        tgt_col_count = len(tgt_rows[0]) if tgt_rows else 0
+
+    active_indexes = []
+    for j in range(min(src_col_count, tgt_col_count)):
+        col_type = _normalize_col_type(col_type_list[j] if j < len(col_type_list) else "other")
+        if col_type != "timestamp":
+            active_indexes.append(j)
+
+    for raw_row in src_rows:
+        raw_row = list(raw_row)
+        src_row = [std_cell(raw_row[j], col_type_list[j] if j < len(col_type_list) else "other") for j in active_indexes]
+        src_hasher = hashlib.blake2b(digest_size=16)
+        for cell in src_row:
+            cell_bytes = cell.encode("utf-8", errors="replace")
+            src_hasher.update(len(cell_bytes).to_bytes(4, "big", signed=False))
+            src_hasher.update(cell_bytes)
+        src_hash = src_hasher.hexdigest()
+        src_hashes.append(src_hash)
+        src_hash_pool[src_hash] += 1
+        if src_hash not in src_row_map:
+            src_row_map[src_hash] = src_row
+        record = {"raw": raw_row, "norm": src_row, "hash": src_hash, "matched": False}
+        src_records.append(record)
+        src_hash_indexes.setdefault(src_hash, []).append(len(src_records) - 1)
+
+    for tgt_raw_row in tgt_rows:
+        tgt_raw_row = list(tgt_raw_row)
+        tgt_row = [std_cell(tgt_raw_row[j], col_type_list[j] if j < len(col_type_list) else "other") for j in active_indexes]
+        tgt_hasher = hashlib.blake2b(digest_size=16)
+        for cell in tgt_row:
+            cell_bytes = cell.encode("utf-8", errors="replace")
+            tgt_hasher.update(len(cell_bytes).to_bytes(4, "big", signed=False))
+            tgt_hasher.update(cell_bytes)
+        tgt_hash = tgt_hasher.hexdigest()
+        tgt_hashes.append(tgt_hash)
+        if src_hash_pool[tgt_hash] > 0:
+            src_hash_pool[tgt_hash] -= 1
+            for record_index in src_hash_indexes.get(tgt_hash, []):
+                if not src_records[record_index]["matched"]:
+                    src_records[record_index]["matched"] = True
+                    break
+        else:
+            matched = False
+            for record in src_records:
+                if record["matched"]:
+                    continue
+                if _rows_fast_equal(record["raw"], record["norm"], tgt_raw_row, tgt_row, col_type_list, active_indexes):
+                    record["matched"] = True
+                    src_hash_pool[record["hash"]] -= 1
+                    matched = True
+                    break
+            if not matched:
+                errors.append((('tgt', tgt_row), None, tgt_hash))
+
+    for record in src_records:
+        if not record["matched"]:
+            errors.append((('src', record["norm"]), record["hash"], None))
+    if errors:
+        message = "NO! hash比对存在%d行差异" % len(errors)
+    else:
+        message = "YES! hash比对通过"
+    print(message)
+    messages.append(message)
+
+    return {
+        "messages": messages,
+        "errors": errors,
+        "matched": len(errors) == 0 and bool(messages) and messages[-1].startswith("YES!"),
+        "src_hashes": src_hashes,
+        "tgt_hashes": tgt_hashes,
+        "src_row_count": src_row_count,
+        "tgt_row_count": tgt_row_count,
+        "src_col_count": src_col_count,
+        "tgt_col_count": tgt_col_count,
+    }
 def std_row(s, t):
     pattern = r"[\[\]（{ }）()【】{}，,￥$\'\"“”‘’]"
     row = []

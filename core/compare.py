@@ -1490,24 +1490,33 @@ class ergodic_database():
                 ):
                     tgt_rows.extend(tuple(row) for row in batch)
 
-                s = pandas.DataFrame(src_rows)
-                t = pandas.DataFrame(tgt_rows)
                 err = []
-                if len(s)!=0 and len(t)!=0 and s.shape[0]==t.shape[0] and s.shape[1]==t.shape[1]:
-                    message = f"Y row_count_equal src={s.shape[0]} tgt={t.shape[0]}"
+                src_row_count = len(src_rows)
+                tgt_row_count = len(tgt_rows)
+                src_col_count = len(src_rows[0]) if src_rows else len(tbcol)
+                tgt_col_count = len(tgt_rows[0]) if tgt_rows else len(tgcol)
+                if src_row_count != 0 and tgt_row_count != 0 and src_row_count == tgt_row_count and src_col_count == tgt_col_count:
+                    message = f"Y row_count_equal src={src_row_count} tgt={tgt_row_count}"
                     print(message)
                     self.bfe.append(message)
-                    err=standard.hash_compare(s,t,[colType['type'] for colType in tbcol],tbname)['errors']
-                elif len(s)!=0 and len(t)!=0 and s.shape[0]!=t.shape[0] and s.shape[1]==t.shape[1]:
-                    message = f"NO! row_count_diff src={s.shape[0]} tgt={t.shape[0]}"
+                    err = standard.hash_compare_rows(
+                        src_rows,
+                        tgt_rows,
+                        [colType['type'] for colType in tbcol],
+                        tbname,
+                        src_col_count=src_col_count,
+                        tgt_col_count=tgt_col_count,
+                    )['errors']
+                elif src_row_count != 0 and tgt_row_count != 0 and src_row_count != tgt_row_count and src_col_count == tgt_col_count:
+                    message = f"NO! row_count_diff src={src_row_count} tgt={tgt_row_count}"
                     print(message)
                     self.bfe.append(message)
-                elif len(s)!=0 and len(t)!=0 and s.shape[1]!=t.shape[1]:
-                    message = f"NO! column_count_diff src={s.shape[1]} tgt={t.shape[1]}"
+                elif src_row_count != 0 and tgt_row_count != 0 and src_col_count != tgt_col_count:
+                    message = f"NO! column_count_diff src={src_col_count} tgt={tgt_col_count}"
                     print(message)
                     self.bfe.append(message)
-                elif len(t)==0 and len(s)!=0:
-                    message = f"NO! target_empty src_rows={s.shape[0]}"
+                elif tgt_row_count == 0 and src_row_count != 0:
+                    message = f"NO! target_empty src_rows={src_row_count}"
                     print(message)
                     self.bfe.append(message)
                 else:

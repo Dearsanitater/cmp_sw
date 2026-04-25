@@ -67,14 +67,14 @@ class ergodic_database(compare.ergodic_database):
             self.tgt_pri = snapshot.primary_map
 
     def _collect_schema_with_connector(self, source, role, explicit_type=None):
-        if not self._uses_connector_backend():
-            return None
         db_type = explicit_type or get_db_type(source)
         if db_type != "sqlserver":
             return None
+        if not self._uses_connector_backend():
+            raise RuntimeError("sqlserver schema collection now requires connector factories")
         factory = getattr(self, f"{role}_factory", None)
         if factory is None:
-            return None
+            raise RuntimeError(f"missing {role} connector factory for sqlserver schema collection")
 
         connector = factory()
         try:
@@ -90,6 +90,8 @@ class ergodic_database(compare.ergodic_database):
 
     def _collect_schema(self, source, role, explicit_type=None):
         db_type = explicit_type or get_db_type(source)
+        if db_type == "sqlserver":
+            return self._collect_schema_with_connector(source, role, explicit_type=db_type)
         connector_snapshot = self._collect_schema_with_connector(source, role, explicit_type=db_type)
         if connector_snapshot is not None:
             return connector_snapshot

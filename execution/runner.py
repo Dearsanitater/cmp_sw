@@ -506,12 +506,53 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass
 from threading import Lock
 import traceback
+from dataclasses import asdict, dataclass
+from threading import Lock
+import traceback
 
 from connector.base import Column, DbConfig
 from connector.registry import create_connector, load_config
 from core.report_jsonl import JsonlReportWriter
 from core.row_compare import compare_rows, normalize_col_type
+from connector.base import Column, DbConfig
+from connector.registry import create_connector, load_config
+from core.report_jsonl import JsonlReportWriter
+from core.row_compare import compare_rows, normalize_col_type
 from .pool import ConnectionPool
+from .state import JobState, JobStatus, TableTaskState, TableTaskStatus, utc_now
+
+
+LEGACY_COLUMN_KEYS = (
+    "col_num",
+    "col_name",
+    "type",
+    "len",
+    "num_pre",
+    "num_scale",
+    "time_sh",
+    "null",
+    "tab_name",
+)
+
+SUPPORTED_DB_TYPES = {"sqlserver", "mysql"}
+
+
+@dataclass(slots=True)
+class DatabaseRuntime:
+    db_key: str
+    config: DbConfig
+    schema_override: str | None = None
+
+    @property
+    def db_type(self) -> str:
+        return self.config.type
+
+    @property
+    def schema(self) -> str | None:
+        return self.schema_override or self.config.schema
+
+    def open_connector(self):
+        return create_connector(self.db_key)
 from .state import JobState, JobStatus, TableTaskState, TableTaskStatus, utc_now
 
 

@@ -1,4 +1,15 @@
+老项目这轮结果大概是：
 
+[phase] schema=1843ms
+[phase] tasklist=0ms
+[phase] compare_loop=9313ms
+[phase] total=11156ms
+新项目这轮结果大概是：
+
+[phase] schema=453ms
+[phase] tasklist=0ms
+[phase] compare_loop=12078ms
+[phase] total=12531ms
 python -m datadiff.cli cmp --src sqlserver_src --tgt mysql_tgt --workers 4
 🧱 项目结构
 用户在页面点击“开始比对”

@@ -2222,6 +2222,8 @@ class ergodic_database():
                                 'col_result': table_col_result,
                                 'cons_err': table_cons_err,
                             }
+                        if self._uses_connector_backend() and not any(acquired.values()):
+                            acquired = self._acquire_table_compare_connectors()
                         rows_start = stime.monotonic()
                         table_cons_err = self._run_row_contain(tab_name, tab_col, a, order_col, ora_search_column)
                         rows_cost_ms = (stime.monotonic() - rows_start) * 1000

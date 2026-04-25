@@ -1,5 +1,54 @@
-“比对内核 + 数据源插件 + Web 管理层” 三层，绝不让 Django 直接碰数据库驱动、进程、HBase、比对细节。
+Django Web 管理端
+    ↓ 只负责创建任务、查看状态、下载报告
 
+任务数据库
+    ↓ 存 job / table_task / result / log 索引
+
+Compare Worker
+    ↓ 真正执行比对任务
+
+Writer Worker
+    ↓ 专门消费事件，写日志、写结果、生成报告基础数据
+“比对内核 + 数据源插件 + Web 管理层” 三层，绝不让 Django 直接碰数据库驱动、进程、HBase、比对细节。
+--cli
+python -m datadiff.cli cmp --src sqlserver_src --tgt mysql_tgt --workers 4
+一个 Python 进程
+├─ CompareRunner
+├─ 4 个表级线程
+├─ src_pool / tgt_pool
+└─ 本地 writer 线程/进程写 jsonl 日志
+    cli-jobrunner-CompareJobRunner
+        -ini：把连接器塞到队列里
+        -run：从队列取连接器，用连接器方法查源库
+
+--无k8s单机架构
+├─ Django 进程
+├─ Compare Worker 进程 1
+├─ Compare Worker 进程 2
+├─ Writer Worker 进程
+├─ SQLite / MySQL 存任务状态
+├─ 本地 logs/reports 存结果
+python manage.py runserver
+python worker.py --mode compare --concurrency 2
+python writer.py
+--Docker、pod
+├─web 容器
+├─compare-worker 容器 * N
+├─writer-worker 容器 * 1~2
+├─MySQL/PostgreSQL
+├─共享文件卷 / MinIO
+--K8s
+Django 创建 compare_job
+↓
+生成 compare_table_task
+↓
+创建 K8s Job，parallelism=N
+↓
+N 个 compare pod 同时抢这个 job 下的表
+↓
+writer pod 持续写日志/结果
+↓
+所有 table_task 完成后 job 完成
 datadiff/
 ├─ core/                         # 纯比对内核，不依赖 Django
 │  ├─ models.py                  # TableSchema / Column / Row / CompareResult
@@ -48,3 +97,50 @@ datadiff/
 │  ├─ integration/
 │  └─ fixtures/
 └─ main.py
+
+--Django 创建 job_001
+↓
+读取源端表列表
+↓
+生成 500 条 table_task
+↓
+启动 4 个 compare pod
+↓
+每个 pod：
+    创建 SQLServer pool
+    创建 MySQL pool
+    抢 table_task
+    比 schema
+    根据参数比 data
+    发送事件给 writer
+↓
+writer 落日志和结果
+↓
+所有 table_task 完成
+↓
+job 状态 success/failed
+
+new
+1. web / django
+   只创建 compare_job
+
+2. planner-worker
+   把 compare_job 展开成 compare_table_task
+
+3. compare-worker
+   抢 compare_table_task 并执行表级比对
+
+4. writer-worker
+   写日志/结果
+
+   任务表：
+compare_table_task (
+    task_id,
+    job_id,
+    table_name,
+    status,      -- pending/running/success/failed
+    worker_id,
+    started_at,
+    heartbeat_at,
+    retry_count
+)

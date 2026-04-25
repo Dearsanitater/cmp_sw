@@ -1,38 +1,57 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Iterable
 
-#先定义config模板，字段类型模板，约束类型模板
-@dataclass
+
+@dataclass(slots=True)
 class DbConfig:
     key: str
     type: str
     host: str
     port: int | None
     database: str
-    username: str
-    password: str
+    username: str | None
+    password: str | None
+    schema: str | None = None
     driver: str | None = None
 
 
-@dataclass
+@dataclass(slots=True)
 class Column:
     name: str
     type_name: str
     ordinal: int
+    nullable: bool | None = None
+    length: int | None = None
+    precision: int | None = None
+    scale: int | None = None
 
-#数据库连接分类定义，base为抽象基类
+
 class BaseConnector(ABC):
-    def list_tables(self) -> list[str]:
+    def __init__(self, config: DbConfig):
+        self.config = config
+
+    @abstractmethod
+    def list_tables(self, schema: str | None = None) -> list[str]:
         raise NotImplementedError
 
-    def get_columns(self, table: str) -> list[str]:#查询col元数据，表结构、列类型、列长度等
+    @abstractmethod
+    def get_columns(self, table: str, schema: str | None = None) -> list[Column]:
         raise NotImplementedError
 
-    def scan_rows(self, table: str, columns: list[str], batch_size: int = 1000):#py轮子性能一般，batch看情况使用
+    @abstractmethod
+    def scan_rows(
+        self,
+        table: str,
+        columns: list[str],
+        batch_size: int = 1000,
+        schema: str | None = None,
+        order_by: str | None = None,
+    ) -> Iterable[list[tuple]]:
         raise NotImplementedError
-    
-    def get_obj(self, table: str, columns: list[str], batch_size: int = 1000):#查询对象、约束等元数据/DDL建表语句，看情况后续处理
-        raise NotImplementedError
-    
-    def close(self):
+
+    @abstractmethod
+    def close(self) -> None:
         raise NotImplementedError

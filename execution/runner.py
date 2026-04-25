@@ -31,15 +31,16 @@ class CompareJobRunner:
         tgt_pool = ConnectionPool(tgt_factory, size=self.job.workers)
 
         try:
-            from core.compare import ergodic_database
+            from core.compare_refactor import ergodic_database
 
-            worker = ergodic_database()
+            worker = ergodic_database(schema_collect_workers=getattr(self.job, "workers", 4))
             worker.src_factory = src_factory
             worker.tgt_factory = tgt_factory
             worker.src_pool = src_pool
             worker.tgt_pool = tgt_pool
             worker.src_schema = getattr(self.job, "src_schema", None)
             worker.tgt_schema = getattr(self.job, "tgt_schema", None)
+            worker.workers = getattr(self.job, "workers", 4)
             worker.batch_size = getattr(self.job, "batch_size", 1000)
 
             err_handling = getattr(self.job, "err_handling", 3)

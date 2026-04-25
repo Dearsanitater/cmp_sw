@@ -33,6 +33,7 @@ class SqlServerConnector(BaseConnector):
     def __init__(self, config):
         super().__init__(config)
         self.type_cache = {}
+        self._column_count_cache = {}
         driver = config.driver or "ODBC Driver 18 for SQL Server"
         start=time.monotonic()
         self.conn = pyodbc.connect(
@@ -51,6 +52,12 @@ class SqlServerConnector(BaseConnector):
             return f"[{schema}].[{table}]"
         return f"[{table}]"
 
+    def _qualified_table_fixed(self, table, schema=None):
+        # 统一补 schema，避免 compare 再自己拼 SQL Server 表名。
+        if schema:
+            return f"[{schema}].[{table}]"
+        return f"[{table}]"
+
     def list_tables(self, schema=None):
         cur = self.conn.cursor()
         base_sql = COMPARE_SQL.get("sqlserver", "table_name")
@@ -60,6 +67,7 @@ class SqlServerConnector(BaseConnector):
         return [re.sub("'", '"', row[0]) for row in cur.fetchall()]
 
     def get_columns(self, table, schema=None):
+        start=time.monotonic()
         cur = self.conn.cursor()
         schema_name = schema or "dbo"
         sql = COMPARE_SQL.get("sqlserver", "col").format(tbname=table, schema=schema_name)
@@ -68,16 +76,23 @@ class SqlServerConnector(BaseConnector):
         for item in cur.execute(sql):
             col_list.append({COL_TUP[index]: item[index] for index in range(len(item))})
         col["tab_col"] = col_list
+        print(f'{self.config.host} {table}列信息获取耗时: {time.monotonic() - start:.2f}秒')
         return col
 
-    def get_obj(self, table, schema=None):
+    def get_obj(self, table, schema=None, col_num=None):
         """
         返回和 compare.cons_analysis/sqlserver 分支一致的列级约束结构，
         这样 cons_compare 可以直接消费，不需要 runner 再做字段改写。
         """
+
         schema_name = schema or "dbo"
         table_name = f"{schema_name}.{table}".replace("'", "''")
-        col_num = len(self.get_columns(table, schema_name)["tab_col"])
+        if col_num is None:
+            cache_key = (schema_name, table)
+            col_num = self._column_count_cache.get(cache_key)
+            if col_num is None:
+                col_num = len(self.get_columns(table, schema_name)["tab_col"])
+                self._column_count_cache[cache_key] = col_num
 
         cursor = self.conn.cursor()
         cursor.execute(f"EXEC sp_help '{table_name}'")
@@ -205,7 +220,7 @@ class SqlServerConnector(BaseConnector):
                     self.type_cache[col_type] = 'cast("{col_name}" as nvarchar(max))'
                     fields.append(self.type_cache[col_type].format(col_name=col_name))
                 converted_count += 1
-            elif col_name in ("datetime2", "datetimesofffset", "time"):
+            elif col_type in ("datetime2", "datetimeoffset", "time"):
                 self.type_cache[col_type] = 'cast("{col_name}" as datetime)'
                 fields.append(self.type_cache[col_type].format(col_name=col_name))
                 converted_count += 1
@@ -222,7 +237,7 @@ class SqlServerConnector(BaseConnector):
             else:
                 fields.append(f'"{col_name}"')
 
-        table_sql = self._qualified_table(table, schema)
+        table_sql = self._qualified_table_fixed(table, schema)
         if len(fields) == 1 or not fields or converted_count == 0:
             return f"select * from {table_sql}"
         return f"select {','.join(fields)} from {table_sql}"

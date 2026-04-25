@@ -20,7 +20,7 @@ from collections import defaultdict
 import multiprocessing
 from threading import Thread
 from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
-from connector.registry import create_connector, load_config
+from connector.registry import load_config
 config = configparser.RawConfigParser()
 config2 = configparser.RawConfigParser()
 config.read(r'resource/compare.ini', encoding='utf-8')
@@ -162,8 +162,9 @@ class ergodic_database():
             })
         return {'tab_num': index, 'tab_name': table_name, 'tab_col': tab_col}
 
-    def _collect_schema_from_connector(self, db_key, role):
-        connector = create_connector(db_key)
+    def _collect_schema_from_connector(self, role):
+        connector = self._acquire_compare_connector(role)
+        broken = False
         try:
             schema = self._schema_name(role)
             tables = connector.list_tables(schema)
@@ -172,16 +173,20 @@ class ergodic_database():
                 columns = connector.get_columns(table_name, schema)
                 snapshot.append(self._normalize_table_snapshot(index, table_name, columns))
             return len(snapshot), snapshot
+        except Exception:
+            broken = True
+            raise
         finally:
-            connector.close()
+            self._release_compare_connector(role, connector, broken=broken)
 
     def define_type(self):
         if not self._uses_connector_backend():
             raise RuntimeError('legacy connection logic has been removed; runner must provide connector factories')
 
         with ThreadPoolExecutor(max_workers=2) as executor:
-            src_future = executor.submit(self._collect_schema_from_connector, self.src_db, 'src')
-            tgt_future = executor.submit(self._collect_schema_from_connector, self.tgt_db, 'tgt')
+            # schema、对象、数据三段都走同一套连接池；这里只是先借后还，不在表级别重复建连。
+            src_future = executor.submit(self._collect_schema_from_connector, 'src')
+            tgt_future = executor.submit(self._collect_schema_from_connector, 'tgt')
             src = src_future.result()
             tgt = tgt_future.result()
 
@@ -714,7 +719,7 @@ class ergodic_database():
                 connector = self._acquire_compare_connector('src' if n == 'src' else 'tgt')
                 schema = self._schema_name('src' if n == 'src' else 'tgt')
                 try:
-                    return connector.get_obj(table_name, schema)
+                    return connector.get_obj(table_name, schema, col_num=col_num)
                 finally:
                     self._release_compare_connector('src' if n == 'src' else 'tgt', connector)
         if n == 'src' and self.conf_src not in self.db2:
@@ -1864,6 +1869,8 @@ class ergodic_database():
         self.np_value=err_handling#1：自动忽略所有无主键，2：忽略所有出错表，3：忽略所有问题表，4：手动选择
         self.map_analysis(compare_file)
         concurrency=4#并发度
+        # runner 传多少 worker，这里就吃多少；没传时再退回 4。
+        #concurrency = max(1, int(getattr(self, 'workers', getattr(self, 'max_workers', 4))))
         tmp_tb_list=[]
         src,tgt=self.define_type()
         if src[0]!= tgt[0]:

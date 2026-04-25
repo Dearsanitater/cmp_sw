@@ -1,4 +1,5 @@
 import argparse
+import time
 
 from execution.job import CompareJob
 from execution.runner import CompareJobRunner
@@ -26,8 +27,9 @@ def main():
         batch_size=args.batch_size,
         compare_rows=not args.skip_data,
     )
+    start=time.monotonic()
     CompareJobRunner(job).run()
-
+    print(f'对比总计消耗: {time.monotonic() - start:.2f}秒')
 
 if __name__ == "__main__":
     main()

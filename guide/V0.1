@@ -1,0 +1,70 @@
+
+python -m datadiff.cli cmp --src sqlserver_src --tgt mysql_tgt --workers 4
+🧱 项目结构
+用户在页面点击“开始比对”
+    ↓
+Django View / DRF API 接收请求
+    ↓
+创建一级 Job：CompareTask
+    task_id = uuid
+    status = WAITING
+    保存任务参数
+    返回 task_id 给前端
+    ↓
+后台启动 cmp.py 子进程
+    ↓
+cmp.py 内部拆分多个二级 Job
+状态流转
+一级 job：
+
+created
+↓
+planning
+↓
+ready
+↓
+running
+↓
+success / failed / partial_failed
+
+CompareTask  一级任务
+    ├── runner-registry取对应数据库连接类（连接器），二级：初始化连接
+    ├── runner-registry-connector-BaseConnector,连接器封装获取元数据抽象方法，各数据连接器负责处理方言语法问题，最终查出统一格式的数据结构给core/compare对比
+    ,二级：读取源端元数据
+    ├── runner-registry-connector-BaseConnector,连接器封装获取元数据抽象方法，各数据连接器负责处理方言语法问题，最终查出统一格式的数据结构给core/compare对比
+    ,二级：读取目标端元数据
+    ├── core/compare二级：比对表
+    ├── core/compare二级：比对字段
+    ├── core/compare二级：比对约束
+    ├── core/compare二级：比对数据
+    ├── 二级：保存结果
+    └── 二级：生成报告
+
+二级 table task：
+
+pending
+↓
+running
+↓
+success / failed / skipped
+
+CLI本地调用单进程运行：
+python -m djangoProject.cli cmp \
+    --src sqlserver_src \
+    --tgt mysql_tgt \
+    --workers 4
+    
+    parser.add_argument("cmp", nargs="?")
+    parser.add_argument("--src", "-src", dest="src", required=True)
+    parser.add_argument("--tgt", "-tgt", dest="tgt", required=True)
+    parser.add_argument("--src-schema", dest="src_schema", default=None)
+    parser.add_argument("--tgt-schema", dest="tgt_schema", default=None)
+    parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument("--batch-size", type=int, default=1000)
+    parser.add_argument("--skip-data", action="store_true")
+--django
+暂时不引入django
+--Docker、pod
+暂时不引入
+--k8s
+暂时不引入

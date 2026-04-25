@@ -9,7 +9,7 @@ import time
 import sqlparse
 import copy
 import configparser
-import opg
+
 import chardet
 import ibm_db
 import sys

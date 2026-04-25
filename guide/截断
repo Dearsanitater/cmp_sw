@@ -1,0 +1,107 @@
+阶段 1：老项目 ptest
+────────────────────────────────────────────
+用户 / Django
+  -> 调 ptest.py
+  -> 本机直接起多个异步进程
+  -> 每个进程跑一个或多个 compare 任务
+  -> 结果写本地文件 / 本地状态 / 数据库
+
+对应理解：
+- 调度器：Django + ptest.py
+- 执行器：你电脑上的多个子进程
+- 资源池：你电脑整机 CPU / 内存 / 网络 / 本地磁盘
+- 状态：很多时候是本机隐式状态
+- 特点：单机异步、多进程、简单直接
+
+
+阶段 2：单机 worker 节点
+────────────────────────────────────────────
+Django / API
+  -> 创建 compare_job
+  -> 本机 planner 展开任务
+  -> 本机 worker 进程池消费 compare_table_task
+  -> writer 写结果
+
+对应理解：
+- 调度器：planner
+- 执行器：单台机器上的 worker 池
+- 资源池：一台服务器
+- 状态：开始显式落库（job/task）
+- 特点：还是单机，但已经有“任务系统”味道了
+
+结构图：
+Django
+  -> compare_job
+  -> planner
+  -> compare_table_task
+  -> worker-1
+  -> worker-2
+  -> worker-3
+  -> writer
+
+
+阶段 3：多 pod worker 集群
+────────────────────────────────────────────
+Django / API
+  -> 创建 compare_job
+  -> planner-worker 展开 compare_table_task
+  -> task 状态进入 MySQL / Redis
+  -> 多个 compare-worker pod 抢任务
+  -> writer-worker 汇总结果
+  -> 前台查询 job 状态
+
+对应理解：
+- 调度器：planner-worker
+- 执行器：多个 pod 里的 compare-worker
+- 资源池：整个 k8s 集群，不再是一台机器
+- 状态：必须显式存储，不能靠本机内存
+- 特点：分布式、可扩缩、可接管、可重试
+
+结构图：
+Django
+  -> compare_job
+  -> planner-worker
+  -> compare_table_task / queue
+       -> Pod A / compare-worker
+       -> Pod B / compare-worker
+       -> Pod C / compare-worker
+  -> writer-worker
+  -> 前台状态查询
+
+
+三者对应关系
+────────────────────────────────────────────
+老 ptest
+  ≈ 单机上直接拉起后台 compare 子进程
+
+单机 worker 节点
+  ≈ 把老 ptest 的“进程池”正规化成 job/task/worker 模型
+
+多 pod worker 集群
+  ≈ 把“单机进程池”扩展成“多机器上的 worker 池”
+
+
+核心变化不是 compare 本体，而是调度边界
+────────────────────────────────────────────
+老 ptest：
+  compare = 执行逻辑 + 本机调度
+
+单机 worker：
+  compare = 执行逻辑
+  planner/worker = 单机调度
+
+多 pod 集群：
+  compare = 执行逻辑
+  planner/queue/worker/writer = 分布式调度
+
+
+一句话类比
+────────────────────────────────────────────
+老 ptest
+  = 你电脑自己单机开黑
+
+单机 worker 节点
+  = 一台专门干活的服务器，自己带进程池
+
+多 pod worker 集群
+  = 一群机器一起接单干活，谁空谁抢，谁挂了别人接着干

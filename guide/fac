@@ -121,17 +121,41 @@ writer 落日志和结果
 job 状态 success/failed
 
 new
-1. web / django：常驻。django进程，仅负责创建一级job，拿状态
-   只创建 compare_job
+Django/Web
+  -> 创建 compare_job(status=planning)
+  -> 返回 job_id 给前台
 
-2. planner-worker：常驻。分发，接一级job，连接源库把表名查成列表，分发或者落库让compare-worker去抢
-   把 compare_job 展开成 compare_table_task
+planner-worker
+  -> 抢到 compare_job(status=planning)
+  -> 读取源/目标库元数据
+  -> 展开成 compare_table_task(pending)
+  -> 回写 compare_job:
+     status=running
+     started_at=now
+     total/pending 计数更新
 
-3. compare-worker：非常驻。日后k8s的临时job，并发最多的进程，抢任务，并发查并发比全在compare-worker
-   抢 compare_table_task 并执行表级比对
+compare-worker (多个 pod)
+  -> 批量 claim 一批 compare_table_task
+  -> pending -> running
+  -> 写 worker_id / claim_token / started_at / lease_until
+  -> 执行表级 compare
+  -> 成功:
+     running -> success
+  -> 失败:
+     running -> failed
+  -> 可重试:
+     running -> pending, retry_count+1
 
-4. writer-worker：常驻。worker只有输出流和最后的jsonl日志。writer负责落库或打表或jsonl转excel。纯异步进程
-   写日志/结果
+writer-worker
+  -> 消费 compare 结果事件/jsonl
+  -> 落结果 / 转报表 / 写摘要
+
+job-aggregator 或 compare-worker 顺手聚合
+  -> 根据 compare_table_task 汇总 compare_job
+  -> 全部 success => job success
+  -> 有 failed 且有 success => partial_failed
+  -> 全 failed => failed
+
 
    任务表：
 compare_table_task (

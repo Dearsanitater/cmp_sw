@@ -1,6 +1,5 @@
 from queue import Queue
-#维护全局连接池，每个连接池对应一个数据库配置，连接池大小可配置，默认10。
-
+#把连接器塞到队列里
 class ConnectionPool:
     def __init__(self, factory, size: int):
         self.factory = factory

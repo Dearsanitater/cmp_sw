@@ -1,6 +1,7 @@
-import pyodbc
+import pyodbc,re
 from .base import BaseConnector, Column
-
+import configparser
+col_tup=('col_num','col_name','type','len','num_pre','num_scale','time_sh','null','tab_name')
 
 class SqlServerConnector(BaseConnector):
     def __init__(self, config):
@@ -15,31 +16,34 @@ class SqlServerConnector(BaseConnector):
             "TrustServerCertificate=yes;"
         )
 
-    def list_tables(self):
+    def list_tables(self,schema=None):#允许自定义schema,默认dbo
         cur = self.conn.cursor()
-        cur.execute("""
-            SELECT TABLE_NAME
-            FROM INFORMATION_SCHEMA.TABLES
-            WHERE TABLE_TYPE='BASE TABLE'
-            ORDER BY TABLE_NAME
-        """)
-        return [r[0] for r in cur.fetchall()]
-
-    def get_columns(self, table):
+        base_sql=configparser.ConfigParser().get("sqlserver","table_name")
+        if schema:
+            str=base_sql+f'''and schema_id=SCHEMA_ID('f{schema}')'''
+        else:
+            str=base_sql+f'''and schema_id=SCHEMA_ID('dbo')'''
+        cur.execute(str)
+        return [re.sub('\'','"',r[0]) for r in cur.fetchall()]
+#此处可以开进程并发查（表结构-scanrow）和get_obj（约束、索引等元数据），后续考虑解耦，单独一个模块专门查元数据，connector只负责连接和查询数据
+    def get_columns(self, table,schema=None):
         cur = self.conn.cursor()
-        cur.execute("""
-            SELECT ORDINAL_POSITION, COLUMN_NAME, DATA_TYPE
-            FROM INFORMATION_SCHEMA.COLUMNS
-            WHERE TABLE_NAME = ?
-            ORDER BY ORDINAL_POSITION
-        """, table)
+        col_list=[]
+        col = {'tab_num': 0, 'tab_name': '', 'tab_col': []}
+        base_sql=configparser.ConfigParser().get("sqlserver","col")
+        if schema:
+            str=base_sql.format(tbname=table,schema=schema)
+        else:
+            str=base_sql.format(tbname=table,schema="dbo")
 
-        return [
-            Column(name=r.COLUMN_NAME, type_name=r.DATA_TYPE, ordinal=r.ORDINAL_POSITION)
-            for r in cur.fetchall()
-        ]
+        p=cur.execute(str)
+        for item in p:
+            col_list.append({col_tup[x]:item[x] for x in range(len(item))})
+        col['tab_name']=table
+        col['tab_col']=col_list
+        return col
 
-    def scan_rows(self, table, columns, batch_size=1000):
+    def scan_rows(self, table, columns, batch_size=100):
         col_sql = ", ".join(f"[{c}]" for c in columns)
         order_col = columns[0]
         sql = f"SELECT {col_sql} FROM [{table}] ORDER BY [{order_col}]"
@@ -55,6 +59,7 @@ class SqlServerConnector(BaseConnector):
 
     def get_obj(self, table: str, columns: list[str], batch_size: int = 1000):
         pass
-
+    def _pre_getrow(self,table):
+        pass
     def close(self):
         self.conn.close()

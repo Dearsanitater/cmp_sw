@@ -7,7 +7,7 @@ class DbConfig:
     key: str
     type: str
     host: str
-    port: int | None
+    port: str
     database: str
     username: str
     password: str
@@ -28,7 +28,7 @@ class BaseConnector(ABC):
     def get_columns(self, table: str) -> list[str]:#查询col元数据，表结构、列类型、列长度等
         raise NotImplementedError
 
-    def scan_rows(self, table: str, columns: list[str], batch_size: int = 1000):#py轮子性能一般，batch看情况使用
+    def scan_rows(self, table: str, columns: list[str], batch_size: int = 1000):#py轮子性能一般，batch看情况使用，全表查询
         raise NotImplementedError
     
     def get_obj(self, table: str, columns: list[str], batch_size: int = 1000):#查询对象、约束等元数据/DDL建表语句，看情况后续处理

@@ -4,30 +4,30 @@ from connector.registry import create_connector
 from .pool import ConnectionPool
 
 
-class CompareJobRunner:
+class CompareJobRunner:#用job初始化类，一个类只对应一个job
     def __init__(self, job):
         self.job = job
         self.src_pool = ConnectionPool(lambda: create_connector(job.src_key), size=job.workers)
         self.tgt_pool = ConnectionPool(lambda: create_connector(job.tgt_key), size=job.workers)
 
-    def run(self):
+    def run(self):#cli单机并发
         try:
-            src = self.src_pool.acquire()
+            src = self.src_pool.acquire()#连接池里是对应数据库的类，类中有方法，compare需要自行调用方法拿数据结构再做比对，考虑后续解耦
             tgt = self.tgt_pool.acquire()
 
             try:
                 src_tables = set(src.list_tables())
                 tgt_tables = set(tgt.list_tables())
             finally:
-                self.src_pool.release(src)
+                self.src_pool.release(src)#查完了放回队列
                 self.tgt_pool.release(tgt)
 
             common_tables = sorted(src_tables & tgt_tables)
             only_src = sorted(src_tables - tgt_tables)
             only_tgt = sorted(tgt_tables - src_tables)
 
-            print(f"源端独有表: {only_src}")
-            print(f"目标端独有表: {only_tgt}")
+            print(f"源端独有表: {len(only_src)}")
+            print(f"目标端独有表: {len(only_tgt)}")
             print(f"共同表数量: {len(common_tables)}")
 
             with ThreadPoolExecutor(max_workers=self.job.workers) as executor:
@@ -48,7 +48,7 @@ class CompareJobRunner:
             self.src_pool.close_all()
             self.tgt_pool.close_all()
 
-    def compare_one_table(self, table):
+    def compare_one_table(self, table):#日后留给分布式，对比单表，并发该方法，原理一样：都从pool拿连接
         src = self.src_pool.acquire()
         tgt = self.tgt_pool.acquire()
 

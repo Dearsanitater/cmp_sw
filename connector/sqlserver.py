@@ -1,7 +1,13 @@
-import pyodbc,re
+from __future__ import annotations
+
+import pyodbc
+
 from .base import BaseConnector, Column
-import configparser
-col_tup=('col_num','col_name','type','len','num_pre','num_scale','time_sh','null','tab_name')
+
+
+def _quote_identifier(name: str) -> str:
+    return f"[{name.replace(']', ']]')}]"
+
 
 class SqlServerConnector(BaseConnector):
     def __init__(self, config):
@@ -9,57 +15,93 @@ class SqlServerConnector(BaseConnector):
         driver = config.driver or "ODBC Driver 18 for SQL Server"
         self.conn = pyodbc.connect(
             f"DRIVER={{{driver}}};"
-            f"SERVER={config.host};"
+            f"SERVER={config.host},{config.port or 1433};"
             f"DATABASE={config.database};"
             f"UID={config.username};"
             f"PWD={config.password};"
             "TrustServerCertificate=yes;"
         )
 
-    def list_tables(self,schema=None):#允许自定义schema,默认dbo
-        cur = self.conn.cursor()
-        base_sql=configparser.ConfigParser().get("sqlserver","table_name")
-        if schema:
-            str=base_sql+f'''and schema_id=SCHEMA_ID('f{schema}')'''
-        else:
-            str=base_sql+f'''and schema_id=SCHEMA_ID('dbo')'''
-        cur.execute(str)
-        return [re.sub('\'','"',r[0]) for r in cur.fetchall()]
-#此处可以开进程并发查（表结构-scanrow）和get_obj（约束、索引等元数据），后续考虑解耦，单独一个模块专门查元数据，connector只负责连接和查询数据
-    def get_columns(self, table,schema=None):
-        cur = self.conn.cursor()
-        col_list=[]
-        col = {'tab_num': 0, 'tab_name': '', 'tab_col': []}
-        base_sql=configparser.ConfigParser().get("sqlserver","col")
-        if schema:
-            str=base_sql.format(tbname=table,schema=schema)
-        else:
-            str=base_sql.format(tbname=table,schema="dbo")
+    def _schema_name(self, schema: str | None = None) -> str:
+        return schema or self.config.schema or "dbo"
 
-        p=cur.execute(str)
-        for item in p:
-            col_list.append({col_tup[x]:item[x] for x in range(len(item))})
-        col['tab_name']=table
-        col['tab_col']=col_list
-        return col
+    def _qualified_table(self, table: str, schema: str | None = None) -> str:
+        return f"{_quote_identifier(self._schema_name(schema))}.{_quote_identifier(table)}"
 
-    def scan_rows(self, table, columns, batch_size=100):
-        col_sql = ", ".join(f"[{c}]" for c in columns)
-        order_col = columns[0]
-        sql = f"SELECT {col_sql} FROM [{table}] ORDER BY [{order_col}]"
+    def list_tables(self, schema: str | None = None) -> list[str]:
+        table_schema = self._schema_name(schema)
+        cur = self.conn.cursor()
+        cur.execute(
+            """
+            SELECT TABLE_NAME
+            FROM INFORMATION_SCHEMA.TABLES
+            WHERE TABLE_TYPE = 'BASE TABLE'
+              AND TABLE_SCHEMA = ?
+            ORDER BY TABLE_NAME
+            """,
+            (table_schema,),
+        )
+        return [row[0] for row in cur.fetchall()]
+
+    def get_columns(self, table: str, schema: str | None = None) -> list[Column]:
+        table_schema = self._schema_name(schema)
+        cur = self.conn.cursor()
+        cur.execute(
+            """
+            SELECT
+                ORDINAL_POSITION,
+                COLUMN_NAME,
+                DATA_TYPE,
+                IS_NULLABLE,
+                CHARACTER_MAXIMUM_LENGTH,
+                NUMERIC_PRECISION,
+                NUMERIC_SCALE
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = ?
+              AND TABLE_NAME = ?
+            ORDER BY ORDINAL_POSITION
+            """,
+            (table_schema, table),
+        )
+
+        columns = []
+        for row in cur.fetchall():
+            columns.append(
+                Column(
+                    name=row[1],
+                    type_name=row[2],
+                    ordinal=int(row[0]),
+                    nullable=(row[3] == "YES") if row[3] is not None else None,
+                    length=row[4],
+                    precision=row[5],
+                    scale=row[6],
+                )
+            )
+        return columns
+
+    def scan_rows(
+        self,
+        table: str,
+        columns: list[str],
+        batch_size: int = 1000,
+        schema: str | None = None,
+        order_by: str | None = None,
+    ):
+        quoted_columns = ", ".join(_quote_identifier(name) for name in columns)
+        order_column = _quote_identifier(order_by or columns[0])
+        sql = (
+            f"SELECT {quoted_columns} "
+            f"FROM {self._qualified_table(table, schema)} "
+            f"ORDER BY {order_column}"
+        )
 
         cur = self.conn.cursor()
         cur.execute(sql)
-
         while True:
             rows = cur.fetchmany(batch_size)
             if not rows:
                 break
             yield rows
 
-    def get_obj(self, table: str, columns: list[str], batch_size: int = 1000):
-        pass
-    def _pre_getrow(self,table):
-        pass
-    def close(self):
+    def close(self) -> None:
         self.conn.close()

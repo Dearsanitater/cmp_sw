@@ -1,5 +1,5 @@
 import configparser
-import re
+import re,time
 from pathlib import Path
 
 import pyodbc
@@ -34,6 +34,7 @@ class SqlServerConnector(BaseConnector):
         super().__init__(config)
         self.type_cache = {}
         driver = config.driver or "ODBC Driver 18 for SQL Server"
+        start=time.monotonic()
         self.conn = pyodbc.connect(
             f"DRIVER={{{driver}}};"
             f"SERVER={config.host};"
@@ -42,6 +43,8 @@ class SqlServerConnector(BaseConnector):
             f"PWD={config.password};"
             "TrustServerCertificate=yes;"
         )
+        print(f'mssql conn({config.host}): {time.monotonic() - start:.2f}秒')
+        
 
     def _qualified_table(self, table, schema=None):#标准化表名
         if schema:

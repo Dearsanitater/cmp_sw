@@ -9,7 +9,7 @@ import pyarrow as pa
 from dateutil import parser
 from datetime import timezone,timedelta,date,time
 from dateutil.tz import tzoffset
-from switch import  db2_conn
+
 from decimal import Decimal
 from shapely import wkb
 from shapely.wkt import dumps
@@ -20,10 +20,11 @@ from collections import defaultdict
 import multiprocessing
 from threading import Thread
 from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
+from connector.registry import create_connector, load_config
 config = configparser.RawConfigParser()
 config2 = configparser.RawConfigParser()
 config.read(r'resource/compare.ini', encoding='utf-8')
-config2.read(r'resource/config.ini', encoding='utf-8')
+config2.read(r'resource/DB.ini', encoding='utf-8')
 compare_file=r'resource/mapping.xlsx'
 #pandas.set_option('display.encoding', 'gbk')
 
@@ -89,6 +90,117 @@ class ergodic_database():
         self.control={}
         #multi
         #self.pool=multiprocessing.Pool()
+
+    @property
+    def table_src_connector(self):
+        return getattr(self._thread_state, 'table_src_connector', None)
+
+    @table_src_connector.setter
+    def table_src_connector(self, value):
+        self._thread_state.table_src_connector = value
+
+    @property
+    def table_tgt_connector(self):
+        return getattr(self._thread_state, 'table_tgt_connector', None)
+
+    @table_tgt_connector.setter
+    def table_tgt_connector(self, value):
+        self._thread_state.table_tgt_connector = value
+
+    def _uses_connector_backend(self):
+        return bool(getattr(self, 'src_factory', None) and getattr(self, 'tgt_factory', None))
+
+    def _db_type(self, db_key):
+        return load_config(db_key).type
+
+    def _schema_name(self, role):
+        explicit = getattr(self, f'{role}_schema', None)
+        if explicit:
+            return explicit
+        db_key = self.src_db if role == 'src' else self.tgt_db
+        return load_config(db_key).schema
+
+    def _acquire_compare_connector(self, role):
+        pool = getattr(self, f'{role}_pool', None)
+        if pool is not None:
+            return pool.acquire()
+        factory = getattr(self, f'{role}_factory', None)
+        if factory is None:
+            raise RuntimeError(f'missing {role} connector factory')
+        return factory()
+
+    def _release_compare_connector(self, role, connector, broken=False):
+        if connector is None:
+            return
+        pool = getattr(self, f'{role}_pool', None)
+        if pool is not None:
+            pool.release(connector, broken=broken)
+            return
+        try:
+            connector.close()
+        except Exception:
+            pass
+
+    def _normalize_table_snapshot(self, index, table_name, columns):
+        if isinstance(columns, dict):
+            columns['tab_num'] = index
+            columns['tab_name'] = table_name
+            return columns
+
+        tab_col = []
+        for column in columns:
+            tab_col.append({
+                'col_num': column.ordinal,
+                'col_name': column.name,
+                'type': column.type_name,
+                'len': column.length,
+                'num_pre': column.precision,
+                'num_scale': column.scale,
+                'time_sh': column.scale,
+                'null': 'YES' if column.nullable else 'NO' if column.nullable is not None else None,
+                'tab_name': table_name,
+            })
+        return {'tab_num': index, 'tab_name': table_name, 'tab_col': tab_col}
+
+    def _collect_schema_from_connector(self, db_key, role):
+        connector = create_connector(db_key)
+        try:
+            schema = self._schema_name(role)
+            tables = connector.list_tables(schema)
+            snapshot = []
+            for index, table_name in enumerate(tables, start=1):
+                columns = connector.get_columns(table_name, schema)
+                snapshot.append(self._normalize_table_snapshot(index, table_name, columns))
+            return len(snapshot), snapshot
+        finally:
+            connector.close()
+
+    def define_type(self):
+        if not self._uses_connector_backend():
+            raise RuntimeError('legacy connection logic has been removed; runner must provide connector factories')
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            src_future = executor.submit(self._collect_schema_from_connector, self.src_db, 'src')
+            tgt_future = executor.submit(self._collect_schema_from_connector, self.tgt_db, 'tgt')
+            src = src_future.result()
+            tgt = tgt_future.result()
+
+        self.conf_src = self.src_db_t
+        self.conf_tgt = self.tgt_db_t
+        return src, tgt
+
+    def _resolve_order_columns(self, order_col):
+        if not order_col or not order_col[1]:
+            return None
+        columns = []
+        for value in order_col[1].values():
+            if not value:
+                continue
+            for col in str(value).split(','):
+                col_name = col.strip().strip('"').strip('`').strip('[]')
+                if col_name and col_name not in columns:
+                    columns.append(col_name)
+        return columns or None
 
     def set_control(self, control=None):
         self.control = control or {}
@@ -165,6 +277,9 @@ class ergodic_database():
         return bool(getattr(session, 'is_thread_local_proxy', False))
 
     def _run_cons_analysis(self, table_name, col_num, role):
+        connector_types = {'sqlserver', 'mysql', 'tdsql', 'tidb'}
+        if self._uses_connector_backend() and (self.conf_src in connector_types or self.conf_tgt in connector_types):
+            return self.cons_analysis(table_name, col_num, role)
         if role == 'src':
             if self._is_thread_safe_session(self.conn_src):
                 return self.cons_analysis(table_name, col_num, role)
@@ -178,6 +293,9 @@ class ergodic_database():
         return self.cons_analysis(table_name, col_num, role)
 
     def _run_row_contain(self, tbname, tbcol, tgcol, order_col, ora_search_column=None):
+        connector_types = {'sqlserver', 'mysql', 'tdsql', 'tidb'}
+        if self._uses_connector_backend() and self.conf_src in connector_types and self.conf_tgt in connector_types:
+            return self.row_contain(None, None, tbname, tbcol, tgcol, order_col, ora_search_column)
         with ExitStack() as stack:
             if self.conn_src is not None and not self._is_thread_safe_session(self.conn_src):
                 stack.enter_context(self._conn_src_lock)
@@ -589,6 +707,16 @@ class ergodic_database():
         print('当前线程：',threading.current_thread().name,'正在获取：',table_name,'端内容')
         start = stime.monotonic()
         columns_info = [];dbname=''
+        connector_types = {'sqlserver', 'mysql', 'tdsql', 'tidb'}
+        if self._uses_connector_backend():
+            db_type = self.conf_src if n == 'src' else self.conf_tgt
+            if db_type in connector_types:
+                connector = self._acquire_compare_connector('src' if n == 'src' else 'tgt')
+                schema = self._schema_name('src' if n == 'src' else 'tgt')
+                try:
+                    return connector.get_obj(table_name, schema)
+                finally:
+                    self._release_compare_connector('src' if n == 'src' else 'tgt', connector)
         if n == 'src' and self.conf_src not in self.db2:
             cursor = self.conn_src.cursor()
             db_type = self.conf_src;dbname=self.src_db
@@ -1252,6 +1380,60 @@ class ergodic_database():
         return final_diff_cons, tab_cons
         #print(self.col_result)
     def row_contain(self,src,tgt,tbname,tbcol,tgcol,order_col,ora_search_column=None):#行数、内容比较
+        connector_types = {'sqlserver', 'mysql', 'tdsql', 'tidb'}
+        if self._uses_connector_backend() and self.conf_src in connector_types and self.conf_tgt in connector_types:
+            src_connector = self._acquire_compare_connector('src')
+            tgt_connector = self._acquire_compare_connector('tgt')
+            try:
+                order_columns = self._resolve_order_columns(order_col)
+                src_rows = []
+                for batch in src_connector.get_row(
+                    tbname,
+                    tbcol,
+                    batch_size=getattr(self, 'batch_size', 1000),
+                    schema=self._schema_name('src'),
+                    order_by=order_columns,
+                ):
+                    src_rows.extend(tuple(row) for row in batch)
+
+                tgt_rows = []
+                for batch in tgt_connector.get_row(
+                    tbname,
+                    tgcol,
+                    batch_size=getattr(self, 'batch_size', 1000),
+                    schema=self._schema_name('tgt'),
+                    order_by=order_columns,
+                ):
+                    tgt_rows.extend(tuple(row) for row in batch)
+
+                s = pandas.DataFrame(src_rows)
+                t = pandas.DataFrame(tgt_rows)
+                err = []
+                if len(s)!=0 and len(t)!=0 and s.shape[0]==t.shape[0] and s.shape[1]==t.shape[1]:
+                    message = f"Y row_count_equal src={s.shape[0]} tgt={t.shape[0]}"
+                    print(message)
+                    self.bfe.append(message)
+                    err=standard.hash_compare(s,t,[colType['type'] for colType in tbcol],tbname)['errors']
+                elif len(s)!=0 and len(t)!=0 and s.shape[0]!=t.shape[0] and s.shape[1]==t.shape[1]:
+                    message = f"NO! row_count_diff src={s.shape[0]} tgt={t.shape[0]}"
+                    print(message)
+                    self.bfe.append(message)
+                elif len(s)!=0 and len(t)!=0 and s.shape[1]!=t.shape[1]:
+                    message = f"NO! column_count_diff src={s.shape[1]} tgt={t.shape[1]}"
+                    print(message)
+                    self.bfe.append(message)
+                elif len(t)==0 and len(s)!=0:
+                    message = f"NO! target_empty src_rows={s.shape[0]}"
+                    print(message)
+                    self.bfe.append(message)
+                else:
+                    print('~ empty_table')
+                    self.bfe.append('~ empty_table')
+                print(err)
+                return err
+            finally:
+                self._release_compare_connector('src', src_connector)
+                self._release_compare_connector('tgt', tgt_connector)
         src_conn = src or self.conn_src
         tgt_conn = tgt or self.conn_tgt
         src_cur=src_conn.cursor()

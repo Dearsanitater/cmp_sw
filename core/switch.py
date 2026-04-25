@@ -17,7 +17,7 @@ from ftplib import FTP
 import json
 import ibm_db_dbi
 from pymysql import OperationalError as PyMySQLOperationalError
-from opg import MysqlConn
+
 
 config = configparser.RawConfigParser()
 rule_cfg = configparser.RawConfigParser()

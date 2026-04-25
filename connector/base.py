@@ -42,7 +42,7 @@ class BaseConnector(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def scan_rows(
+    def get_row(
         self,
         table: str,
         columns: list[str],

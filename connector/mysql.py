@@ -77,7 +77,7 @@ class MySqlConnector(BaseConnector):
             )
         return columns
 
-    def scan_rows(
+    def get_row(
         self,
         table: str,
         columns: list[str],
@@ -215,6 +215,7 @@ class MySqlConnector(BaseConnector):
                         row["check_name"] = check_name
                         row["check_define"] = check_define
                         break
+        return columns_info
 
     def close(self) -> None:
         self.conn.close()

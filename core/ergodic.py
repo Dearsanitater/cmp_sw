@@ -15,7 +15,7 @@ from openpyxl.worksheet.hyperlink import Hyperlink
 
 from openpyxl import load_workbook
 ILLEGAL_CHARACTERS_RE = re.compile(r'[\000-\010]|[\013-\014]|[\016-\037]')
-import opg
+
 class get_casefile ():
     def __init__(self):
         self.case_dir=r'resource/basic'

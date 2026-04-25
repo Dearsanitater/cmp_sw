@@ -14,6 +14,7 @@ from dateutil import parser
 from dateutil.tz import tzoffset
 from decimal import Decimal
 
+from connector.base import SchemaSnapshot
 from connector.registry import load_config
 from db_refactor import ConnectionFactory, DialectRegistry, get_db_type
 
@@ -72,21 +73,55 @@ class ergodic_database(compare.ergodic_database):
             return None
         if not self._uses_connector_backend():
             raise RuntimeError("sqlserver schema collection now requires connector factories")
-        factory = getattr(self, f"{role}_factory", None)
-        if factory is None:
-            raise RuntimeError(f"missing {role} connector factory for sqlserver schema collection")
-
-        connector = factory()
+        schema_name = getattr(self, f"{role}_schema", None) or load_config(source).schema
+        base_connector = self._acquire_compare_connector(role)
+        broken = False
         try:
-            schema_name = getattr(self, f"{role}_schema", None) or connector.config.schema or load_config(source).schema
-            snapshot = connector.collect_schema_snapshot(
-                schema=schema_name,
-                worker_count=self.schema_collect_workers,
+            table_names = [
+                name
+                for name in base_connector.list_tables(schema_name)
+                if not str(name).lower().startswith("i2_logkeeper") and "systransch" not in str(name).lower()
+            ]
+            primary_tables = base_connector.list_primary_tables(schema_name)
+            primary_map = base_connector.list_primary_map(schema_name)
+
+            if self.schema_collect_workers <= 1 or len(table_names) <= 1:
+                tables = []
+                for index, table_name in enumerate(table_names, start=1):
+                    columns = base_connector.get_columns(table_name, schema_name)
+                    tables.append(self._normalize_table_snapshot(index, table_name, columns))
+            else:
+                def load_table(task):
+                    index, table_name = task
+                    connector = self._acquire_compare_connector(role)
+                    connector_broken = False
+                    try:
+                        columns = connector.get_columns(table_name, schema_name)
+                        return self._normalize_table_snapshot(index, table_name, columns)
+                    except Exception:
+                        connector_broken = True
+                        raise
+                    finally:
+                        self._release_compare_connector(role, connector, broken=connector_broken)
+
+                workers = min(max(int(self.schema_collect_workers), 1), len(table_names))
+                with ThreadPoolExecutor(max_workers=workers) as executor:
+                    tables = list(executor.map(load_table, enumerate(table_names, start=1)))
+
+            snapshot = SchemaSnapshot(
+                tab_num=len(table_names),
+                tables=tables,
+                table_names=table_names,
+                primary_tables=primary_tables,
+                primary_map=primary_map,
             )
             self._apply_role_state(role, None, db_type, snapshot)
             return snapshot.tab_num, snapshot.tables
+        except Exception:
+            broken = True
+            raise
         finally:
-            connector.close()
+            self._release_compare_connector(role, base_connector, broken=broken)
 
     def _collect_schema(self, source, role, explicit_type=None):
         db_type = explicit_type or get_db_type(source)

@@ -162,16 +162,35 @@ class ergodic_database():
             })
         return {'tab_num': index, 'tab_name': table_name, 'tab_col': tab_col}
 
+    def _load_table_columns(self, table_name, role):
+        connector = self._acquire_compare_connector(role)
+        broken = False
+        try:
+            schema = self._schema_name(role)
+            columns = connector.get_columns(table_name, schema)
+            return self._normalize_table_snapshot(0, table_name, columns)['tab_col']
+        except Exception:
+            broken = True
+            raise
+        finally:
+            self._release_compare_connector(role, connector, broken=broken)
+
     def _collect_schema_from_connector(self, role):
         connector = self._acquire_compare_connector(role)
         broken = False
         try:
             schema = self._schema_name(role)
-            tables = connector.list_tables(schema)
-            snapshot = []
-            for index, table_name in enumerate(tables, start=1):
-                columns = connector.get_columns(table_name, schema)
-                snapshot.append(self._normalize_table_snapshot(index, table_name, columns))
+            table_names = connector.list_tables(schema)
+            if role == 'src':
+                self.src_pri = connector.list_primary_tables(schema)
+            else:
+                self.tgt_pri = connector.list_primary_map(schema)
+
+            # schema 阶段只拿表名，列信息延迟到单表 compare 时再查。
+            snapshot = [
+                {'tab_num': index, 'tab_name': table_name, 'tab_col': []}
+                for index, table_name in enumerate(table_names, start=1)
+            ]
             return len(snapshot), snapshot
         except Exception:
             broken = True
@@ -1777,9 +1796,12 @@ class ergodic_database():
             d['tab_col'] = result.copy()
         return d['tab_col']
     def search_dicts(self,dlist,key, value,y):
-        self.templist = []
+        self.templist = None
         for d in dlist:
             if key in d and d[key].upper() == value: #and not value.upper().startswith('MSREPL'):
+                if not d['tab_col'] or not y['tab_col']:
+                    self.templist = d['tab_col']
+                    break
                 if len(d['tab_col'])==len(y['tab_col']):
                     self.pre_dict(d,y)
                 if len(d['tab_col'])<len(y['tab_col']) and self.tgt_db_t!='hbase':
@@ -1868,9 +1890,8 @@ class ergodic_database():
         self.isom=[]
         self.np_value=err_handling#1：自动忽略所有无主键，2：忽略所有出错表，3：忽略所有问题表，4：手动选择
         self.map_analysis(compare_file)
-        concurrency=4#并发度
         # runner 传多少 worker，这里就吃多少；没传时再退回 4。
-        #concurrency = max(1, int(getattr(self, 'workers', getattr(self, 'max_workers', 4))))
+        concurrency = max(1, int(getattr(self, 'workers', getattr(self, 'max_workers', 4))))
         tmp_tb_list=[]
         src,tgt=self.define_type()
         if src[0]!= tgt[0]:
@@ -1903,7 +1924,7 @@ class ergodic_database():
             for y in src[1]:
                 a,y=self.search_dicts(tgt[1],'tab_name',y['tab_name'].upper(),y)#源备表名列表可能乱序，按源端表名匹配
                 table_log=[y['tab_name']]
-                if a:
+                if a is not None:
                     tmp_tb_list.append((y['tab_name'],a,y['tab_col']))
                 else:
                     print('\033[0;34m ！ \033[0m备端查无该表 %s'%y['tab_name'])
@@ -1962,9 +1983,14 @@ class ergodic_database():
                 return {
                     'messages': list(self.bfe),
                     'col_result': table_col_result,
-                    'cons_err': table_cons_err,
-                }
+                'cons_err': table_cons_err,
+            }
             print(f'表 {tab_name} 开始比对')
+            if self._uses_connector_backend():
+                if not tab_col:
+                    tab_col = self._load_table_columns(tab_name, 'src')
+                if not a:
+                    a = self._load_table_columns(tab_name, 'tgt')
             if len(a) == len(tab_col) or (self.tgt_db_t=='hbase' and len(a)<len(tab_col)):
                 print('\033[0;34m %s \033[0m源备字段数相同，源端字段：%d \t备端字段%d'%(tab_name,len(tab_col),len(a)))
                 self.bfe.append('\033[0;34m %s \033[0m源备字段数相同，源端字段：%d \t备端字段%d'%(tab_name,len(tab_col),len(a)))

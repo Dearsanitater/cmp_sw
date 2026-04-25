@@ -84,29 +84,11 @@ class ergodic_database(compare.ergodic_database):
             ]
             primary_tables = base_connector.list_primary_tables(schema_name)
             primary_map = base_connector.list_primary_map(schema_name)
-
-            if self.schema_collect_workers <= 1 or len(table_names) <= 1:
-                tables = []
-                for index, table_name in enumerate(table_names, start=1):
-                    columns = base_connector.get_columns(table_name, schema_name)
-                    tables.append(self._normalize_table_snapshot(index, table_name, columns))
-            else:
-                def load_table(task):
-                    index, table_name = task
-                    connector = self._acquire_compare_connector(role)
-                    connector_broken = False
-                    try:
-                        columns = connector.get_columns(table_name, schema_name)
-                        return self._normalize_table_snapshot(index, table_name, columns)
-                    except Exception:
-                        connector_broken = True
-                        raise
-                    finally:
-                        self._release_compare_connector(role, connector, broken=connector_broken)
-
-                workers = min(max(int(self.schema_collect_workers), 1), len(table_names))
-                with ThreadPoolExecutor(max_workers=workers) as executor:
-                    tables = list(executor.map(load_table, enumerate(table_names, start=1)))
+            # schema 阶段只保留表名，把字段信息留到单表 compare 时懒加载。
+            tables = [
+                {"tab_num": index, "tab_name": table_name, "tab_col": []}
+                for index, table_name in enumerate(table_names, start=1)
+            ]
 
             snapshot = SchemaSnapshot(
                 tab_num=len(table_names),

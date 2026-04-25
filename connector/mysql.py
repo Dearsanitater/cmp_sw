@@ -217,5 +217,21 @@ class MySqlConnector(BaseConnector):
                         break
         return columns_info
 
+    def scan_rows(
+        self,
+        table: str,
+        columns_meta,
+        batch_size: int = 1000,
+        schema: str | None = None,
+        order_by=None,
+    ):
+        yield from self.get_row(
+            table,
+            columns_meta,
+            batch_size=batch_size,
+            schema=schema,
+            order_by=order_by,
+        )
+
     def close(self) -> None:
         self.conn.close()

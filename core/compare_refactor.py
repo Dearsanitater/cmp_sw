@@ -14,6 +14,7 @@ from dateutil import parser
 from dateutil.tz import tzoffset
 from decimal import Decimal
 
+from connector.registry import load_config
 from db_refactor import ConnectionFactory, DialectRegistry, get_db_type
 
 
@@ -53,18 +54,45 @@ class ergodic_database(compare.ergodic_database):
         target["tab_num"] = snapshot.tab_num
         target["tab_name"] = copy.deepcopy(snapshot.table_names)
         if role == "src":
-            self.conn_src = session
+            if session is not None:
+                self.conn_src = session
             self.conf_src = db_type
             if snapshot.primary_tables:
                 self.src_pri = snapshot.primary_tables
         else:
-            self.conn_tgt = session
+            if session is not None:
+                self.conn_tgt = session
             self.conf_tgt = db_type
         if snapshot.primary_map:
             self.tgt_pri = snapshot.primary_map
 
+    def _collect_schema_with_connector(self, source, role, explicit_type=None):
+        if not self._uses_connector_backend():
+            return None
+        db_type = explicit_type or get_db_type(source)
+        if db_type != "sqlserver":
+            return None
+        factory = getattr(self, f"{role}_factory", None)
+        if factory is None:
+            return None
+
+        connector = factory()
+        try:
+            schema_name = getattr(self, f"{role}_schema", None) or connector.config.schema or load_config(source).schema
+            snapshot = connector.collect_schema_snapshot(
+                schema=schema_name,
+                worker_count=self.schema_collect_workers,
+            )
+            self._apply_role_state(role, None, db_type, snapshot)
+            return snapshot.tab_num, snapshot.tables
+        finally:
+            connector.close()
+
     def _collect_schema(self, source, role, explicit_type=None):
         db_type = explicit_type or get_db_type(source)
+        connector_snapshot = self._collect_schema_with_connector(source, role, explicit_type=db_type)
+        if connector_snapshot is not None:
+            return connector_snapshot
         session = self._factory.create_thread_local(source, explicit_type=db_type)
         collector = self._dialects.resolve(db_type)
         snapshot = collector.collect(

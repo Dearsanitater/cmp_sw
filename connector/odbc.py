@@ -23,14 +23,14 @@ class OdbcConnector(BaseConnector):
             f"DATABASE={config.database};"
         )
 
-    def list_tables(self):
+    def list_tables(self, schema: str | None = None):
         cur = self.conn.cursor()
         return [
             row.table_name
             for row in cur.tables(tableType="TABLE")
         ]
 
-    def get_columns(self, table):
+    def get_columns(self, table, schema: str | None = None):
         cur = self.conn.cursor()
         return [
             Column(
@@ -41,9 +41,20 @@ class OdbcConnector(BaseConnector):
             for row in cur.columns(table=table)
         ]
 
-    def scan_rows(self, table, columns, batch_size=1000):
+    def get_obj(self, table, schema: str | None = None, col_num: int | None = None) -> list[dict]:
+        raise NotImplementedError("ODBC connector does not implement get_obj yet")
+
+    def get_row(self, table, columns, batch_size=1000, schema: str | None = None, order_by=None):
+        yield from self.scan_rows(table, columns, batch_size=batch_size, schema=schema, order_by=order_by)
+
+    def scan_rows(self, table, columns, batch_size=1000, schema: str | None = None, order_by=None):
         col_sql = ", ".join(columns)
         sql = f"SELECT {col_sql} FROM {table}"
+        if order_by:
+            if isinstance(order_by, (list, tuple)):
+                sql += " ORDER BY " + ", ".join(order_by)
+            else:
+                sql += f" ORDER BY {order_by}"
 
         cur = self.conn.cursor()
         cur.execute(sql)

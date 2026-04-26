@@ -4,6 +4,7 @@ import configparser
 from pathlib import Path
 
 from .base import DbConfig
+from .hbase_conn import HBaseConnector
 from .mysql import MySqlConnector
 from .odbc import OdbcConnector
 from .sqlserver import SqlServerConnector
@@ -13,6 +14,7 @@ CONNECTORS = {
     "sqlserver": SqlServerConnector,
     "mysql": MySqlConnector,
     "odbc": OdbcConnector,
+    "hbase": HBaseConnector,
 }
 
 DEFAULT_DB_INI = Path(__file__).resolve().parents[1] / "resource" / "DB.ini"

@@ -202,6 +202,10 @@ class ergodic_database():
                 self._release_compare_connector(role, connector, broken=broken)
 #并发获取源备字段属性
     def _load_table_columns_pair(self, table_name, src_columns, tgt_columns):
+        if self.tgt_db_t == 'hbase':
+            if not src_columns:
+                src_columns = self._load_table_columns(table_name, 'src')
+            return src_columns, copy.deepcopy(src_columns)
         if src_columns and tgt_columns:
             return src_columns, tgt_columns
 
@@ -745,7 +749,7 @@ class ergodic_database():
         print('当前线程：',threading.current_thread().name,'正在获取：',table_name,'端内容')
         start = stime.monotonic()
         columns_info = [];dbname=''
-        connector_types = {'sqlserver', 'mysql', 'tdsql', 'tidb'}
+        connector_types = {'sqlserver', 'mysql', 'tdsql', 'tidb', 'hbase'}
         if self._uses_connector_backend():
             db_type = self.conf_src if n == 'src' else self.conf_tgt
             if db_type in connector_types:
@@ -1423,7 +1427,7 @@ class ergodic_database():
         return final_diff_cons, tab_cons
         #print(self.col_result)
     def row_contain(self,src,tgt,tbname,tbcol,tgcol,order_col,ora_search_column=None):#行数、内容比较
-        connector_types = {'sqlserver', 'mysql', 'tdsql', 'tidb'}
+        connector_types = {'sqlserver', 'mysql', 'tdsql', 'tidb', 'hbase'}
         if self._uses_connector_backend() and self.conf_src in connector_types and self.conf_tgt in connector_types:
             src_connector = self.table_src_connector
             tgt_connector = self.table_tgt_connector
@@ -1434,7 +1438,7 @@ class ergodic_database():
             if own_tgt:
                 tgt_connector = self._acquire_compare_connector('tgt')
             try:
-                order_columns = self._resolve_order_columns(order_col)
+                order_columns = None if self.conf_tgt == 'hbase' else self._resolve_order_columns(order_col)
                 src_rows = []
                 for batch in src_connector.get_row(
                     tbname,
@@ -2028,7 +2032,7 @@ class ergodic_database():
             columns_cost_ms = 0.0
             constraints_cost_ms = 0.0
             rows_cost_ms = 0.0
-            connector_types = {'sqlserver', 'mysql', 'tdsql', 'tidb'}
+            connector_types = {'sqlserver', 'mysql', 'tdsql', 'tidb', 'hbase'}
             try:
                 if self._check_control(f'表 {tab_name}'):
                     return {

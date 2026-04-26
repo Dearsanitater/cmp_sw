@@ -11,6 +11,12 @@
 [phase] compare_loop=12078ms
 [phase] total=12531ms
 python -m datadiff.cli cmp --src sqlserver_src --tgt mysql_tgt --workers 4
+
+V0.2 已合并的dev处理了compare比对逻辑中所有字典列表统一转df性能开销过大，解决办法先对元组hash，有问题再回退取数比较，
+暂时还没完全弃用df，看性能需求
+-计划
+V0.3 调试django
+V0.4 探索k8s
 🧱 项目结构
 用户在页面点击“开始比对”
     ↓

@@ -1,5 +1,6 @@
 from __future__ import annotations
-
+# 这个模块负责把 compare 产生的事件写到 JSONL 文件
+#django以后看看怎么发，先写日志
 import json
 from pathlib import Path
 from threading import Lock

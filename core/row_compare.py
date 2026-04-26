@@ -44,7 +44,8 @@ TYPE_ALIASES = {
     "longblob": "binary",
 }
 
-
+#从标准化分支迁移过来专门处理特异性比对的
+#后续看情况归类
 def normalize_col_type(type_name: str | None) -> str:
     if not type_name:
         return "other"
@@ -99,8 +100,6 @@ def normalize_value(value, col_type: str | None = None) -> str:
     if normalized_type == "string":
         return text
     return text.strip().upper()
-
-
 def normalize_row(row: tuple, column_defs: list[dict]) -> list[str]:
     normalized = []
     for value, column in zip(row, column_defs):

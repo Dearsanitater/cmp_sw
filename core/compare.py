@@ -2118,17 +2118,17 @@ class ergodic_database():
             finally:
                 if self._uses_connector_backend():
                     self._release_table_compare_connectors(acquired, broken_roles)
-if __name__ == '__main__':#refact
+if __name__ == '__main3__':#refact，新版从cli入口，compare调试基本弃用
     src = 'mssql##';tgt = 'hyperbase184';err_handling = 3;if_cpdata=1#9.0常用 mysql##/oracle/mssql##
     
-    import compare_refactor as cr
-    p=cr.ergodic_database()
-    #p=ergodic_database()
-    dump_excel=ergodic.get_casefile()
-    start=stime.monotonic()
-    p.compare(src,tgt,err_handling,if_cpdata)
-    print('总耗时%.2f毫秒'%((stime.monotonic()-start)*1000))
-    p.dump_e(dump_excel)
+    # import compare_refactor as cr
+    # p=cr.ergodic_database()
+    # #p=ergodic_database()
+    # dump_excel=ergodic.get_casefile()
+    # start=stime.monotonic()
+    # p.compare(src,tgt,err_handling,if_cpdata)
+    # print('总耗时%.2f毫秒'%((stime.monotonic()-start)*1000))
+    # p.dump_e(dump_excel)
 if __name__ == '__main__2':#手动调试
     src = 'mssql##';tgt = 'doris2';err_handling = 3;if_cpdata=0#9.0常用 mysql##/oracle/mssql##
     p=ergodic_database()

@@ -1,0 +1,31 @@
+docker 基础镜像必备环境
+base image
+  -> Python 3.10
+  -> OpenJDK/JRE 8 或 11
+  -> msodbcsql18 + unixodbc-dev
+  -> Python dependencies
+  -> project code
+  -> resource/ + lib/
+分角色跑容器
+django-web
+  command: daphne -b 0.0.0.0 -p 8000 crm.asgi:application
+
+redis --八字没一撇，预计最后要用rabbitmq或者redis/redis集群
+    -redis 集群覆盖所有k8s集群
+  给 channels 用
+compare-worker
+  command: python cli.py --src ... --tgt ... --workers 4
+--k8s后worker调度
+web pod:
+  command: ["daphne", "-b", "0.0.0.0", "-p", "8000", "crm.asgi:application"]
+
+compare-worker pod:
+  command: ["python", "worker.py"]
+
+planner pod:
+  command: ["python", "planner.py"]
+
+requirements.txt
+Dockerfile
+.dockerignore
+docker-compose.yml

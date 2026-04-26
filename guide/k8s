@@ -29,3 +29,12 @@ requirements.txt
 Dockerfile
 .dockerignore
 docker-compose.yml
+----探索K8s
+--mysql调度
+所有 pod -> 同一张 compare_job / compare_table_task
+worker 用 status/lease_until claim
+
+--redis调度
+所有 pod -> 同一个 Redis Stream/List
+worker 消费任务
+MySQL 仍存最终状态

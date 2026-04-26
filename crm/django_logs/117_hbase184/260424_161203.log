@@ -1,0 +1,23 @@
+进程号27040,更改输出流完毕
+mssql## hyperbase184
+sqlserver 172.20.72.117 链接耗时:430.917毫秒
+sqlserver 172.20.72.117 链接耗时:163.461毫秒
+sqlserver 172.20.72.117 链接耗时:164.077毫秒
+no jvm exsist,starting...
+未启用kerberos认证
+start建立连接...
+HBase 无认证连接成功: hconnection-0x57bc27f5
+stablish conn done
+hyperbase184链接耗时:1931.238800毫秒
+['i2_char003', 'i2_char004', 'info_binary_dml_single_nopk', 'info_binary_dml_single_nopk_drp', 'info_binary_dml_single_nopk_irp', 'info_binary_dml_single_nopk_urp', 'info_char_dml_single_nopk_urp', 'info_sql_variant_dml_single_pk', 'info_sql_variant_dml_single_pk_drp', 'info_ssms_crt_table_nov', 'info_varbinary_dml_single_nopk', 'info_varbinary_dml_single_nopk_drp', 'info_varbinary_dml_single_nopk_urp', 'info_varbinary_max_dml_single_nopk', 'info_varbinary_max_dml_single_nopk_drp', 'info_varbinary_max_dml_single_nopk_irp', 'info_varbinary_max_dml_single_nopk_urp']
+源备表数量不一致，源端共计 2个表，备端共计 17个表，
+ 缺失表单[]
+[]为无主键表，[]可能为出错表,注意排查
+备库多表，暂不处理
+[0;34m ！ [0m备端查无该表 test_one_col
+[0;34m ！ [0m备端查无该表 info_big_table_500cols
+总耗时4110.00毫秒
+源备没有同名表，不予打表，程序退出
+恢复输出流
+subprocess done
+记录report和规则关系到表

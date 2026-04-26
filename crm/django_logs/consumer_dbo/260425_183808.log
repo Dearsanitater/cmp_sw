@@ -1,0 +1,13 @@
+进程号50632,更改输出流完毕
+mssql## hyperbase184_dbo
+sqlserver 172.20.72.117 链接耗时:346.866毫秒
+sqlserver 172.20.72.117 链接耗时:167.187毫秒
+sqlserver 172.20.72.117 链接耗时:166.675毫秒
+sqlserver 172.20.72.117 链接耗时:176.511毫秒
+sqlserver 172.20.72.117 链接耗时:175.845毫秒
+no jvm exsist,starting...
+未启用kerberos认证
+start建立连接...
+HBase 无认证连接成功: hconnection-0x57bc27f5
+stablish conn done
+hyperbase184_dbo链接耗时:1924.711200毫秒

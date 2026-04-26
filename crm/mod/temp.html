@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>规则详情</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        .d-flex {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+        }
+        #file-list-container {
+            width: 250px;
+            max-height: 400px;
+            overflow-y: auto;
+            background: #fff;
+            border: 1px solid #ddd;
+            padding: 10px;
+            flex-shrink: 0;
+        }
+        #file-preview {
+            flex-grow: 1;
+            min-height: 300px;
+            border: 1px solid #ddd;
+            padding: 15px;
+            background-color: #f9f9f9;
+            overflow: auto;
+        }
+        .container {
+            margin-top: 20px;
+        }
+        .checkbox-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+        }
+        .column {
+            width: 30%;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: #f9f9f9;
+        }
+        .checkbox-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body class="container mt-4">
+    <h2 class="mb-3">规则详情
+        <button onclick="toggleDownloadSection()">筛选并下载Excel</button>
+        <a href="/detail/download" class="btn btn-primary">下载整个xlsx工作簿</a>
+    </h2>
+    <div id="filter-section" class="hidden">
+        <h3>选择文件下载
+            <button onclick="submitDownload()">下载所筛选文件</button>
+        </h3>
+        <div class="checkbox-container">
+            <div class="column">
+                <strong>规则列表</strong>
+                <label><input type="checkbox" id="select-all-rules"> 全选</label>
+                <div id="rules-checkboxes" class="checkbox-list"></div>
+            </div>
+            <div class="column">
+                <strong>文件列表</strong>
+                <label><input type="checkbox" id="select-all-files"> 全选</label>
+                <div id="files-checkboxes" class="checkbox-list"></div>
+            </div>
+            <div class="column">
+                <strong>已选文件</strong>
+                <div id="selected-files" class="checkbox-list"></div>
+            </div>
+        </div>
+    </div>
+    <script>
+        function toggleDownloadSection() {
+            let filterSection = document.getElementById("filter-section");
+            filterSection.classList.toggle("hidden");
+        }
+    </script>
+</body>
+</html>

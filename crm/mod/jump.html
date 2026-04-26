@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简易版跳一跳 (Three.js)</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #fff; font-family: sans-serif; }
+        #score { position: absolute; top: 20px; left: 20px; font-size: 40px; color: #333; font-weight: bold; pointer-events: none;}
+        #info { position: absolute; bottom: 20px; width: 100%; text-align: center; color: #888; pointer-events: none;}
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <div id="score">0</div>
+    <div id="info">按住鼠标蓄力，松开跳跃</div>
+
+<script>
+    // --- 全局变量 ---
+    let scene, camera, renderer;
+    let player, currentBlock, nextBlock;
+    let blocks = [];
+    let score = 0;
+
+    // 游戏状态
+    let isCharging = false;
+    let isJumping = false;
+    let chargeTime = 0; // 蓄力时间
+    let velocity = { x: 0, y: 0, z: 0 };
+
+    // 常量配置
+    const CONFIG = {
+        background: 0xf5f5f5, // 背景色
+        playerColor: 0x333333, // 玩家颜色
+        blockColor: 0xffffff,  // 方块基础色
+        blockHeight: 10,
+        blockSize: 15,
+        playerSize: 5,
+        distanceRange: [20, 45], // 方块间距范围
+        chargeRate: 1.5, // 蓄力转化为距离的倍率
+        gravity: 1.8,    // 模拟重力
+        jumpHeight: 30   // 跳跃高度参数
+    };
+
+    init();
+    animate();
+
+    function init() {
+        // 1. 场景与渲染器
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(CONFIG.background);
+        // 添加雾效果，让远处于渐变
+        scene.fog = new THREE.Fog(CONFIG.background, 100, 400);
+
+        // 2. 相机 (正交相机，产生伪3D/等轴测视图效果)
+        const aspect = window.innerWidth / window.innerHeight;
+        const d = 60;
+        camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
+        camera.position.set(100, 100, 100); // 斜45度视角
+        camera.lookAt(0, 0, 0);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true; // 开启阴影
+        document.body.appendChild(renderer.domElement);
+
+        // 3. 灯光
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+        dirLight.position.set(50, 100, 50);
+        dirLight.castShadow = true;
+        dirLight.shadow.camera.left = -50;
+        dirLight.shadow.camera.right = 50;
+        dirLight.shadow.camera.top = 50;
+        dirLight.shadow.camera.bottom = -50;
+        scene.add(dirLight);
+
+        // 4. 初始化游戏物体
+        createPlayer();
+        createFirstBlocks();
+
+        // 5. 事件监听
+        window.addEventListener('mousedown', onMouseDown);
+        window.addEventListener('mouseup', onMouseUp);
+        window.addEventListener('resize', onWindowResize);
+        // 移动端支持
+        window.addEventListener('touchstart', (e) => { e.preventDefault(); onMouseDown(); }, {passive: false});
+        window.addEventListener('touchend', onMouseUp);
+    }
+
+    // --- 创建物体函数 ---
+
+    function createPlayer() {
+        const geometry = new THREE.BoxGeometry(CONFIG.playerSize, CONFIG.playerSize, CONFIG.playerSize);
+        geometry.translate(0, CONFIG.playerSize/2, 0); // 调整锚点到底部
+        const material = new THREE.MeshLambertMaterial({ color: CONFIG.playerColor });
+        player = new THREE.Mesh(geometry, material);
+        player.position.set(0, CONFIG.blockHeight, 0);
+        player.castShadow = true;
+        scene.add(player);
+    }
+
+    function createBlock(x, z) {
+        const geometry = new THREE.BoxGeometry(CONFIG.blockSize, CONFIG.blockHeight, CONFIG.blockSize);
+        // 随机给方块上个色，增加趣味
+        const color = new THREE.Color().setHSL(Math.random(), 0.5, 0.6);
+        const material = new THREE.MeshLambertMaterial({ color: color });
+        const block = new THREE.Mesh(geometry, material);
+
+        block.position.set(x, CONFIG.blockHeight / 2, z);
+        block.receiveShadow = true;
+        scene.add(block);
+        blocks.push(block);
+        return block;
+    }
+
+    function createFirstBlocks() {
+        currentBlock = createBlock(0, 0);
+        spawnNextBlock();
+    }
+
+    function spawnNextBlock() {
+        // 决定下一个方块是在左侧还是右侧 (0: x轴, 1: z轴)
+        const direction = Math.random() > 0.5 ? 'x' : 'z';
+        const distance = Math.floor(Math.random() * (CONFIG.distanceRange[1] - CONFIG.distanceRange[0]) + CONFIG.distanceRange[0]);
+
+        const nextPos = { x: currentBlock.position.x, z: currentBlock.position.z };
+
+        if (direction === 'x') {
+            nextPos.x -= distance;
+        } else {
+            nextPos.z -= distance;
+        }
+
+        nextBlock = createBlock(nextPos.x, nextPos.z);
+    }
+
+    // --- 游戏逻辑控制 ---
+
+    function onMouseDown() {
+        if (isJumping) return;
+        isCharging = true;
+        chargeTime = 0;
+        // 压缩动画在 animate 中处理
+    }
+
+    function onMouseUp() {
+        if (!isCharging || isJumping) return;
+        isCharging = false;
+        isJumping = true;
+
+        // 恢复形状
+        player.scale.y = 1;
+        player.scale.x = 1;
+        player.scale.z = 1;
+
+        // 计算跳跃向量
+        // 简单的物理模拟: 距离 = 时间 * 速度
+        // 我们需要跳向下一个方块的方向，但力度由按压时间决定
+
+        // 此时其实并不知道玩家想往哪个方向跳，
+        // 真正的跳一跳是根据玩家按压时间算距离，方向是固定的（角色面向）。
+        // 为了简化，我们假设玩家总是“试图”跳向下一个方块的方向。
+
+        const targetX = nextBlock.position.x;
+        const targetZ = nextBlock.position.z;
+        const currentX = currentBlock.position.x;
+        const currentZ = currentBlock.position.z;
+
+        // 判断下一个方块在哪个轴
+        const diffX = targetX - currentX;
+        const diffZ = targetZ - currentZ;
+
+        // 基础力度，按得越久飞得越远
+        // 注意：这里为了简化，我们只允许玩家沿着正确的轴跳。
+        // 如果你想做得更难，可以根据玩家角色实际朝向来算。
+
+        const jumpDistance = chargeTime * CONFIG.chargeRate * 4; // 系数微调
+
+        // 分解速度
+        if (Math.abs(diffX) > Math.abs(diffZ)) {
+            // 往 X 轴负方向(因为我们前面生成的x是减法)或者正方向
+            velocity.x = diffX < 0 ? -jumpDistance/20 : jumpDistance/20; // 简单速度模拟
+            velocity.z = 0;
+        } else {
+            // 往 Z 轴
+            velocity.z = diffZ < 0 ? -jumpDistance/20 : jumpDistance/20;
+            velocity.x = 0;
+        }
+
+        velocity.y = CONFIG.jumpHeight / 10; // 初始向上速度
+    }
+
+    function checkCollision() {
+        // 简单的落地判定
+        const pPos = player.position;
+
+        // 计算玩家与当前方块和目标方块中心的距离
+        const distToCurrent = Math.sqrt(Math.pow(pPos.x - currentBlock.position.x, 2) + Math.pow(pPos.z - currentBlock.position.z, 2));
+        const distToNext = Math.sqrt(Math.pow(pPos.x - nextBlock.position.x, 2) + Math.pow(pPos.z - nextBlock.position.z, 2));
+
+        const limit = CONFIG.blockSize / 2 + CONFIG.playerSize / 2 - 2; // 稍微宽容一点
+
+        if (distToNext < limit) {
+            // 成功跳到下一个
+            score++;
+            document.getElementById('score').innerText = score;
+
+            // 更新方块引用
+            currentBlock = nextBlock;
+            spawnNextBlock();
+            moveCamera();
+            return true;
+        } else if (distToCurrent < limit) {
+            // 落在原地，不算分，也不算输
+            return true;
+        } else {
+            // 掉下去了
+            return false;
+        }
+    }
+
+    function moveCamera() {
+        // 相机平滑移动到新位置
+        // 这里为了代码简短，直接计算偏移量
+        // 实际项目中建议使用 TWEEN.js 做平滑动画
+        const targetPos = {
+            x: currentBlock.position.x + 100,
+            z: currentBlock.position.z + 100
+        };
+
+        // 简单的缓动效果写在 animate 里比较麻烦，这里直接瞬移（略生硬），
+        // 或者在 update 里写一个简单的 lerp
+    }
+
+    // --- 动画循环 ---
+
+    function animate() {
+        requestAnimationFrame(animate);
+
+        // 1. 蓄力效果 (压扁)
+        if (isCharging && !isJumping) {
+            chargeTime++;
+            // 最大蓄力限制
+            if (chargeTime > 100) chargeTime = 100;
+
+            // 视觉表现：Y轴压扁，XZ轴变宽
+            const scaleY = 1 - chargeTime * 0.005;
+            const scaleXZ = 1 + chargeTime * 0.003;
+            player.scale.set(scaleXZ, scaleY, scaleXZ);
+        }
+
+        // 2. 跳跃物理逻辑
+        if (isJumping) {
+            player.position.x += velocity.x;
+            player.position.z += velocity.z;
+            player.position.y += velocity.y;
+
+            velocity.y -= CONFIG.gravity * 0.04; // 重力加速度
+
+            // 落地检测 (当Y回到方块高度)
+            if (player.position.y <= CONFIG.blockHeight) {
+                player.position.y = CONFIG.blockHeight;
+                isJumping = false;
+                velocity = { x: 0, y: 0, z: 0 };
+
+                const success = checkCollision();
+                if (!success) {
+                    alert("游戏结束! 得分: " + score);
+                    location.reload();
+                }
+            }
+        }
+
+        // 3. 相机跟随 (简单的 Lerp 插值实现平滑移动)
+        // 目标视角中心是当前方块和下一个方块的中间，或者就是当前方块
+        const targetCamX = currentBlock.position.x + 100;
+        const targetCamZ = currentBlock.position.z + 100;
+
+        camera.position.x += (targetCamX - camera.position.x) * 0.05;
+        camera.position.z += (targetCamZ - camera.position.z) * 0.05;
+        camera.lookAt(camera.position.x - 100, 0, camera.position.z - 100);
+
+        renderer.render(scene, camera);
+    }
+
+    function onWindowResize() {
+        const aspect = window.innerWidth / window.innerHeight;
+        const d = 60;
+        camera.left = -d * aspect;
+        camera.right = d * aspect;
+        camera.top = d;
+        camera.bottom = -d;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+</script>
+</body>
+</html>

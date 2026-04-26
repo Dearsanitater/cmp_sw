@@ -1,0 +1,200 @@
+进程号52668,更改输出流完毕
+mssql## hyperbase184
+sqlserver 172.20.72.117 链接耗时:413.085毫秒
+sqlserver 172.20.72.117 链接耗时:198.028毫秒
+sqlserver 172.20.72.117 链接耗时:198.263毫秒
+sqlserver 172.20.72.117 链接耗时:199.613毫秒
+sqlserver 172.20.72.117 链接耗时:201.185毫秒
+no jvm exsist,starting...
+未启用kerberos认证
+start建立连接...
+HBase 无认证连接成功: hconnection-0x57bc27f5
+stablish conn done
+hyperbase184链接耗时:2149.951400毫秒
+['info_binary_dml_single_nopk', 'info_binary_dml_single_nopk_drp', 'info_binary_dml_single_nopk_irp', 'info_binary_dml_single_nopk_urp', 'info_ssms_crt_table_nov', 'info_varbinary_dml_single_nopk', 'info_varbinary_dml_single_nopk_drp', 'info_varbinary_dml_single_nopk_irp', 'info_varbinary_dml_single_nopk_urp', 'info_varbinary_max_dml_single_nopk', 'info_varbinary_max_dml_single_nopk_drp', 'info_varbinary_max_dml_single_nopk_irp', 'info_varbinary_max_dml_single_nopk_urp']
+源端共计 13个表，备端共计 13个表
+表 info_ssms_crt_table_nov 开始比对
+[0;34m info_ssms_crt_table_nov [0m源备字段数相同，源端字段：12 	备端字段12
+[0;31m NO! [0m 	 no列源备映射错误，源端为int None位	期望更改为text	实际备端为int None位
+[0;31m NO! [0m 	 c_int列源备映射错误，源端为int None位	期望更改为text	实际备端为int None位
+[0;31m NO! [0m 	 c_tinyint列源备映射错误，源端为tinyint None位	期望更改为text	实际备端为tinyint None位
+[0;31m NO! [0m 	 c_smallint列源备映射错误，源端为smallint None位	期望更改为text	实际备端为smallint None位
+[0;31m NO! [0m 	 c_bigint列源备映射错误，源端为bigint None位	期望更改为text	实际备端为bigint None位
+[0;31m NO! [0m 	 c_decimal列源备映射错误，源端为decimal None位	期望更改为text	实际备端为decimal None位
+[0;31m NO! [0m 	 c_numeric列源备映射错误，源端为numeric None位	期望更改为text	实际备端为numeric None位
+[0;31m NO! [0m 	 c_float列源备映射错误，源端为float None位	期望更改为text	实际备端为float None位
+[0;31m NO! [0m 	 c_real列源备映射错误，源端为real None位	期望更改为text	实际备端为real None位
+[0;31m NO! [0m 	 c_money列源备映射错误，源端为money None位	期望更改为text	实际备端为money None位
+[0;31m NO! [0m 	 c_smallmoney列源备映射错误，源端为smallmoney None位	期望更改为text	实际备端为smallmoney None位
+[0;31m NO! [0m 	 c_bit列源备映射错误，源端为bit None位	期望更改为text	实际备端为bit None位
+当前线程： ThreadPoolExecutor-9_0 正在获取： info_ssms_crt_table_nov 端内容
+表 info_binary_dml_single_nopk_irp 开始比对
+[0;34m info_binary_dml_single_nopk_irp [0m源备字段数相同，源端字段：4 	备端字段4
+[0;31m NO! [0m 	 id列源备映射错误，源端为int None位	期望更改为text	实际备端为int None位
+[0;31m NO! [0m 	 c_binary列源备映射错误，源端为binary 1位	期望更改为text	实际备端为binary 1位
+[0;31m NO! [0m 	 c_binary_20列源备映射错误，源端为binary 20位	期望更改为text	实际备端为binary 20位
+[0;31m NO! [0m 	 c_binary_8000列源备映射错误，源端为binary 8000位	期望更改为text	实际备端为binary 8000位
+当前线程： ThreadPoolExecutor-9_1 正在获取： info_binary_dml_single_nopk_irp 端内容
+表 info_binary_dml_single_nopk_urp 开始比对
+[0;34m info_binary_dml_single_nopk_urp [0m源备字段数相同，源端字段：4 	备端字段4
+[0;31m NO! [0m 	 id列源备映射错误，源端为int None位	期望更改为text	实际备端为int None位
+[0;31m NO! [0m 	 c_binary列源备映射错误，源端为binary 1位	期望更改为text	实际备端为binary 1位
+[0;31m NO! [0m 	 c_binary_20列源备映射错误，源端为binary 20位	期望更改为text	实际备端为binary 20位
+[0;31m NO! [0m 	 c_binary_8000列源备映射错误，源端为binary 8000位	期望更改为text	实际备端为binary 8000位
+当前线程： ThreadPoolExecutor-9_2 正在获取： info_binary_dml_single_nopk_urp 端内容
+表 info_binary_dml_single_nopk_drp 开始比对
+[0;34m info_binary_dml_single_nopk_drp [0m源备字段数相同，源端字段：4 	备端字段4
+[0;31m NO! [0m 	 id列源备映射错误，源端为int None位	期望更改为text	实际备端为int None位
+[0;31m NO! [0m 	 c_binary列源备映射错误，源端为binary 1位	期望更改为text	实际备端为binary 1位
+[0;31m NO! [0m 	 c_binary_20列源备映射错误，源端为binary 20位	期望更改为text	实际备端为binary 20位
+[0;31m NO! [0m 	 c_binary_8000列源备映射错误，源端为binary 8000位	期望更改为text	实际备端为binary 8000位
+当前线程： 
+ThreadPoolExecutor-9_3 正在获取： info_binary_dml_single_nopk_drp 端内容
+sqlserver 172.20.72.117 链接耗时:29.917毫秒
+sqlserver 172.20.72.117 链接耗时:33.866毫秒
+sqlserver 172.20.72.117 链接耗时:29.630毫秒
+sqlserver 172.20.72.117 链接耗时:31.195毫秒
+src:info_binary_dml_single_nopk_irp列信息获取耗时: 406.00毫秒
+select * from [info_binary_dml_single_nopk_irp]
+src:info_binary_dml_single_nopk_urp列信息获取耗时: 422.00毫秒
+select * from [info_binary_dml_single_nopk_urp]
+src:info_ssms_crt_table_nov列信息获取耗时: 422.00毫秒
+select "no","c_int","c_tinyint","c_smallint",convert(decimal(38,0),c_bigint),"c_decimal","c_numeric",CONVERT(nvarchar(max),"c_float"),CONVERT(nvarchar(max),"c_real"),"c_money","c_smallmoney","c_bit" from [info_ssms_crt_table_nov]  order by  "no"
+src:info_binary_dml_single_nopk_drp列信息获取耗时: 469.00毫秒
+select * from [info_binary_dml_single_nopk_drp]
+Y 行数相同,源4行,备4行
+无主键表
+YES! hash比对通过
+[]
+表 info_ssms_crt_table_nov 比对完成，耗时735.00毫秒
+表 info_binary_dml_single_nopk 开始比对
+[0;34m info_binary_dml_single_nopk [0m源备字段数相同，源端字段：4 	备端字段4
+[0;31m NO! [0m 	 id列源备映射错误，源端为int None位	期望更改为text	实际备端为int None位
+[0;31m NO! [0m 	 c_binary列源备映射错误，源端为binary 1位	期望更改为text	实际备端为binary 1位
+[0;31m NO! [0m 	 c_binary_20列源备映射错误，源端为binary 20位	期望更改为text	实际备端为binary 20位
+[0;31m NO! [0m 	 c_binary_8000列源备映射错误，源端为binary 8000位	期望更改为text	实际备端为binary 8000位
+当前线程： ThreadPoolExecutor-9_0 正在获取： info_binary_dml_single_nopk 端内容
+src:info_binary_dml_single_nopk列信息获取耗时: 47.00毫秒
+select * from [info_binary_dml_single_nopk]
+Y 行数相同,源5行,备5行
+无主键表
+YES! hash比对通过
+[]
+表 info_binary_dml_single_nopk_urp 比对完成，耗时828.00毫秒
+表 info_varbinary_dml_single_nopk_irp 开始比对
+[0;34m info_varbinary_dml_single_nopk_irp [0m源备字段数相同，源端字段：4 	备端字段4
+[0;31m NO! [0m 	 id列源备映射错误，源端为int None位	期望更改为text	实际备端为int None位
+[0;31m NO! [0m 	 c_varbinary列源备映射错误，源端为varbinary 1位	期望更改为text	实际备端为varbinary 1位
+[0;31m NO! [0m 	 c_varbinary_100列源备映射错误，源端为varbinary 100位	期望更改为text	实际备端为varbinary 100位
+[0;31m NO! [0m 	 c_varbinary_8000列源备映射错误，源端为varbinary 8000位	期望更改为text	实际备端为varbinary 8000位
+当前线程： ThreadPoolExecutor-9_2 正在获取： info_varbinary_dml_single_nopk_irp 端内容
+Y 行数相同,源2行,备2行
+无主键表
+YES! hash比对通过
+[]
+表 info_binary_dml_single_nopk_drp 比对完成，耗时922.00毫秒
+表 info_varbinary_dml_single_nopk_urp 开始比对
+[0;34m info_varbinary_dml_single_nopk_urp [0m源备字段数相同，源端字段：4 	备端字段4
+[0;31m NO! [0m 	 id列源备映射错误，源端为int None位	期望更改为text	实际备端为int None位
+[0;31m NO! [0m 	 c_varbinary列源备映射错误，源端为varbinary 1位	期望更改为text	实际备端为varbinary 1位
+[0;31m NO! [0m 	 c_varbinary_100列源备映射错误，源端为varbinary 100位	期望更改为text	实际备端为varbinary 100位
+[0;31m NO! [0m 	 c_varbinary_8000列源备映射错误，源端为varbinary 8000位	期望更改为text	实际备端为varbinary 8000位
+当前线程： ThreadPoolExecutor-9_3 正在获取： info_varbinary_dml_single_nopk_urp 端内容
+src:info_varbinary_dml_single_nopk_irp列信息获取耗时: 109.00毫秒
+select * from [info_varbinary_dml_single_nopk_irp]
+Y 行数相同,源9行,备9行
+无主键表
+YES! hash比对通过
+[]
+表 info_binary_dml_single_nopk_irp 比对完成，耗时969.00毫秒
+表 info_varbinary_dml_single_nopk_drp 开始比对
+[0;34m info_varbinary_dml_single_nopk_drp [0m源备字段数相同，源端字段：4 	备端字段4
+[0;31m NO! [0m 	 id列源备映射错误，源端为int None位	期望更改为text	实际备端为int None位
+[0;31m NO! [0m 	 c_varbinary列源备映射错误，源端为varbinary 1位	期望更改为text	实际备端为varbinary 1位
+[0;31m NO! [0m 	 c_varbinary_100列源备映射错误，源端为varbinary 100位	期望更改为text	实际备端为varbinary 100位
+[0;31m NO! [0m 	 c_varbinary_8000列源备映射错误，源端为varbinary 8000位	期望更改为text	实际备端为varbinary 8000位
+当前线程： ThreadPoolExecutor-9_1 正在获取： info_varbinary_dml_single_nopk_drp 端内容
+Y 行数相同,源1行,备1行
+无主键表
+YES! hash比对通过
+[]
+表 info_binary_dml_single_nopk 比对完成，耗时281.00毫秒
+表 info_varbinary_dml_single_nopk 开始比对
+[0;34m info_varbinary_dml_single_nopk [0m源备字段数相同，源端字段：4 	备端字段4
+[0;31m NO! [0m 	 id列源备映射错误，源端为int None位	期望更改为text	实际备端为int None位
+[0;31m NO! [0m 	 c_varbinary列源备映射错误，源端为varbinary 1位	期望更改为text	实际备端为varbinary 1位
+[0;31m NO! [0m 	 c_varbinary_100列源备映射错误，源端为varbinary 20位	期望更改为text	实际备端为varbinary 20位
+[0;31m NO! [0m 	 c_varbinary_8000列源备映射错误，源端为varbinary 8000位	期望更改为text	实际备端为varbinary 8000位
+当前线程： ThreadPoolExecutor-9_0 正在获取： info_varbinary_dml_single_nopk 端内容
+src:info_varbinary_dml_single_nopk_drp列信息获取耗时: 32.00毫秒
+select * from [info_varbinary_dml_single_nopk_drp]
+~ 空表
+[]
+表 info_varbinary_dml_single_nopk_irp 比对完成，耗时203.00毫秒
+表 info_varbinary_max_dml_single_nopk_irp 开始比对
+[0;34m info_varbinary_max_dml_single_nopk_irp [0m源备字段数相同，源端字段：4 	备端字段4
+[0;31m NO! [0m 	 id列源备映射错误，源端为int None位	期望更改为text	实际备端为int None位
+[0;31m NO! [0m 	 c_varbinary_max1列源备映射错误，源端为varbinary -1位	期望更改为text	实际备端为varbinary -1位
+[0;31m NO! [0m 	 c_varbinary_max2列源备映射错误，源端为varbinary -1位	期望更改为text	实际备端为varbinary -1位
+[0;31m NO! [0m 	 c_image3列源备映射错误，源端为image 2147483647位	期望更改为text	实际备端为image 2147483647位
+当前线程： ThreadPoolExecutor-9_2 正在获取： info_varbinary_max_dml_single_nopk_irp 端内容
+src:info_varbinary_dml_single_nopk列信息获取耗时: 47.00毫秒
+select * from [info_varbinary_dml_single_nopk]
+src:info_varbinary_max_dml_single_nopk_irp列信息获取耗时: 47.00毫秒
+select * from [info_varbinary_max_dml_single_nopk_irp]
+src:info_varbinary_dml_single_nopk_urp列信息获取耗时: 141.00毫秒
+select * from [info_varbinary_dml_single_nopk_urp]
+~ 空表
+[]
+表 info_varbinary_dml_single_nopk_drp 比对完成，耗时140.00毫秒
+表 info_varbinary_max_dml_single_nopk_urp 开始比对
+[0;34m info_varbinary_max_dml_single_nopk_urp [0m源备字段数相同，源端字段：4 	备端字段4
+[0;31m NO! [0m 	 id列源备映射错误，源端为int None位	期望更改为text	实际备端为int None位
+[0;31m NO! [0m 	 c_varbinary_max1列源备映射错误，源端为varbinary -1位	期望更改为text	实际备端为varbinary -1位
+[0;31m NO! [0m 	 c_varbinary_max2列源备映射错误，源端为varbinary -1位	期望更改为text	实际备端为varbinary -1位
+[0;31m NO! [0m 	 c_image3列源备映射错误，源端为image 2147483647位	期望更改为text	实际备端为image 2147483647位
+当前线程： ThreadPoolExecutor-9_1 正在获取： info_varbinary_max_dml_single_nopk_urp 端内容
+~ 空表
+[]
+表 info_varbinary_dml_single_nopk 比对完成，耗时141.00毫秒
+表 info_varbinary_max_dml_single_nopk_drp 开始比对
+[0;34m info_varbinary_max_dml_single_nopk_drp [0m源备字段数相同，源端字段：4 	备端字段4
+[0;31m NO! [0m 	 id列源备映射错误，源端为int None位	期望更改为text	实际备端为int None位
+[0;31m NO! [0m 	 c_varbinary_max1列源备映射错误，源端为varbinary -1位	期望更改为text	实际备端为varbinary -1位
+[0;31m NO! [0m 	 c_varbinary_max2列源备映射错误，源端为varbinary -1位	期望更改为text	实际备端为varbinary -1位
+[0;31m NO! [0m 	 c_image3列源备映射错误，源端为image 2147483647位	期望更改为text	实际备端为image 2147483647位
+当前线程： ThreadPoolExecutor-9_0 正在获取： info_varbinary_max_dml_single_nopk_drp 端内容
+src:info_varbinary_max_dml_single_nopk_urp列信息获取耗时: 47.00毫秒
+select * from [info_varbinary_max_dml_single_nopk_urp]
+~ 空表
+[]
+表 info_varbinary_dml_single_nopk_urp 比对完成，耗时265.00毫秒
+表 info_varbinary_max_dml_single_nopk 开始比对
+[0;34m info_varbinary_max_dml_single_nopk [0m源备字段数相同，源端字段：4 	备端字段4
+[0;31m NO! [0m 	 id列源备映射错误，源端为int None位	期望更改为text	实际备端为int None位
+[0;31m NO! [0m 	 c_varbinary_max1列源备映射错误，源端为varbinary -1位	期望更改为text	实际备端为varbinary -1位
+[0;31m NO! [0m 	 c_varbinary_max2列源备映射错误，源端为varbinary -1位	期望更改为text	实际备端为varbinary -1位
+[0;31m NO! [0m 	 c_image3列源备映射错误，源端为image 2147483647位	期望更改为text	实际备端为image 2147483647位
+当前线程： ThreadPoolExecutor-9_3 正在获取： info_varbinary_max_dml_single_nopk 端内容
+src:info_varbinary_max_dml_single_nopk_drp列信息获取耗时: 31.00毫秒
+select * from [info_varbinary_max_dml_single_nopk_drp]
+~ 空表
+[]
+表 info_varbinary_max_dml_single_nopk_irp 比对完成，耗时188.00毫秒
+src:info_varbinary_max_dml_single_nopk列信息获取耗时: 32.00毫秒
+select * from [info_varbinary_max_dml_single_nopk]
+~ 空表
+[]
+表 info_varbinary_max_dml_single_nopk_urp 比对完成，耗时141.00毫秒
+~ 空表
+[]
+表 info_varbinary_max_dml_single_nopk_drp 比对完成，耗时140.00毫秒
+~ 空表
+[]
+表 info_varbinary_max_dml_single_nopk 比对完成，耗时125.00毫秒
+总耗时5656.00毫秒
+[Errno 13] Permission denied: 'resource/test_report/report.xlsx',大概率后台打开了report.xlsx,10s后重试
+结果存至 2026042316hbase0 工作表
+恢复输出流
+subprocess done
+记录report和规则关系到表

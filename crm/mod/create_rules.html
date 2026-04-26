@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Rule</title>
+    <style>
+        body {
+            margin: 0;
+            background: #f4f4f4;
+            color: #222;
+            font-family: Arial, sans-serif;
+        }
+
+        .page {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        form {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+            padding: 18px;
+            border: 1px solid #dfe3e8;
+            border-radius: 8px;
+            background: #fff;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: #495057;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        input,
+        select {
+            box-sizing: border-box;
+            width: 100%;
+            padding: 9px 10px;
+            border: 1px solid #cfd6dd;
+            border-radius: 5px;
+            background: #fff;
+            font-size: 14px;
+        }
+
+        .full {
+            grid-column: 1 / -1;
+        }
+
+        .db-info {
+            min-height: 72px;
+            padding: 10px;
+            border: 1px solid #e4e8ed;
+            border-radius: 6px;
+            background: #f8fafc;
+            color: #333;
+            font-size: 13px;
+            line-height: 1.7;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        button,
+        a.button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 36px;
+            padding: 8px 16px;
+            border: 0;
+            border-radius: 5px;
+            background: #287fa7;
+            color: #fff;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+        }
+
+        a.button {
+            background: #6c757d;
+        }
+
+        @media (max-width: 760px) {
+            form {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="toolbar">
+            <h1>Create Rule</h1>
+            <a class="button" href="/rule/test/">Back</a>
+        </div>
+
+        <form method="post" action="">
+            {% csrf_token %}
+            <div>
+                <label for="user_id">User ID</label>
+                <input type="number" id="user_id" name="user_id" value="1" required>
+            </div>
+
+            <div>
+                <label for="rule_name">Rule Name</label>
+                <input type="text" id="rule_name" name="rule_name" required>
+            </div>
+
+            <div>
+                <label for="src_type">Source Type</label>
+                <select id="src_type" onchange="renderDbOptions('src')">
+                    <option value="">Select source type</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="tgt_type">Target Type</label>
+                <select id="tgt_type" onchange="renderDbOptions('tgt')">
+                    <option value="">Select target type</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="src">Source Database</label>
+                <select id="src" name="src" required onchange="renderDbInfo('src')">
+                    <option value="">Select source database</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="tgt">Target Database</label>
+                <select id="tgt" name="tgt" required onchange="renderDbInfo('tgt')">
+                    <option value="">Select target database</option>
+                </select>
+            </div>
+
+            <div>
+                <label>Source Info</label>
+                    <div id="src-info" class="db-info">
+                        用例自动化选项：<br>
+                        表名是否唯一 1 on 0 off<br>
+                        --部分旧版用例有大量重复表名，开启此项表名=表名+用例号
+                    </div>
+            </div>
+
+            <div>
+                <label>Target Info</label>
+                        <div id="tgt-info" class="db-info">
+                            比对选项：<br>
+                            --选项均已弃用，默认只比源备都存在的表
+                        </div>
+            </div>
+
+            <div>
+                <label for="unique_number">Unique Number</label>
+                <select id="unique_number" name="unique_number">
+                    <option value="0">0 - off</option>
+                    <option value="1">1 - on</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="error_handler">Error Handler</label>
+                <select id="error_handler" name="error_handler">
+                    <option value="1">1 - 忽略无主键表</option>
+                    <option value="2">2 - 忽略出错表</option>
+                    <option value="3" selected>3 - 忽略问题表</option>
+                </select>
+            </div>
+
+            <div class="actions full">
+                <button type="submit">Submit</button>
+            </div>
+        </form>
+    </div>
+
+    <script id="db-sources" type="application/json">{{ db_sources_json|safe }}</script>
+    <script>
+        const dbSources = JSON.parse(document.getElementById("db-sources").textContent);
+        const dbMap = new Map(dbSources.map(item => [item.name, item]));
+        const dbTypes = [...new Set(dbSources.map(item => item.type || "unknown"))].sort();
+
+        function fillTypeSelect(kind) {
+            const select = document.getElementById(`${kind}_type`);
+            dbTypes.forEach(type => {
+                const option = document.createElement("option");
+                option.value = type;
+                option.textContent = type;
+                select.appendChild(option);
+            });
+        }
+
+        function renderDbOptions(kind) {
+            const typeSelect = document.getElementById(`${kind}_type`);
+            const dbSelect = document.getElementById(kind);
+            dbSelect.replaceChildren(new Option(kind === "src" ? "Select source database" : "Select target database", ""));
+            dbSources
+                .filter(item => (item.type || "unknown") === typeSelect.value)
+                .forEach(item => {
+                    const host = item.host || "-";
+                    const schema = item.schema || item.namespace || item.databasename || "-";
+                    const option = new Option(`${item.name} | ${host} | ${schema}`, item.name);
+                    dbSelect.appendChild(option);
+                });
+            renderDbInfo(kind);
+        }
+
+        function renderDbInfo(kind) {
+            const select = document.getElementById(kind);
+            const info = document.getElementById(`${kind}-info`);
+            const data = dbMap.get(select.value);
+            if (!data) {
+                info.textContent = kind === "src" ? "Select a source database." : "Select a target database.";
+                return;
+            }
+            const lines = [
+                `type: ${data.type || "-"}`,
+                `host: ${data.host || "-"}${data.port ? `:${data.port}` : ""}`,
+                `database: ${data.databasename || "-"}`,
+                `schema/namespace: ${data.schema || data.namespace || "-"}`
+            ];
+            info.replaceChildren(...lines.map(line => {
+                const div = document.createElement("div");
+                div.textContent = line;
+                return div;
+            }));
+        }
+
+        fillTypeSelect("src");
+        fillTypeSelect("tgt");
+    </script>
+</body>
+</html>

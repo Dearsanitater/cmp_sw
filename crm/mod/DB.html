@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Database Resource Configuration</title>
+    <style>
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .column {
+            flex: 1;
+            min-width: 300px;
+            padding: 10px;
+        }
+        .config-section {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .config-buttons {
+            margin-top: 10px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            width: 400px;
+            max-height: 80%;
+            overflow-y: auto;
+        }
+        .modal button {
+            margin-top: 10px;
+        }
+        .config-section ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .config-section li {
+            margin: 5px 0;
+        }
+        /* For dynamically added rows */
+        .key-value-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            position: relative;
+        }
+        .key-value-row input {
+            flex-grow: 1;
+            margin-right: 5px;
+            padding-right: 30px; /* 保持 delete 按钮的空间，防止输入框变短 */
+        }
+        .delete-row {
+            cursor: pointer;
+            color: red;
+            position: absolute;
+            right: 5px;
+            display: none;
+        }
+        .key-value-row:hover .delete-row {
+            display: inline;
+        }
+    </style>
+    <script>
+        function filterConfig() {
+            let selectedType = document.getElementById("typeFilter").value;
+            let sections = document.querySelectorAll(".config-section");
+
+            sections.forEach(section => {
+                let type = section.getAttribute("data-type");
+                let column = section.closest(".column");
+                if (selectedType === "all" || type === selectedType) {
+                    section.style.display = "block";
+                    column.style.display = 'block';
+                } else {
+                    section.style.display = "none";
+                    column.style.display = "none";
+                }
+            });
+        }
+        // Show modal for editing all values in the section
+        function openEditModal(section, values) {
+            console.log(values);
+            let modal = document.getElementById("editModal");
+            let modalContent = document.getElementById("modalContent");
+            modalContent.innerHTML = '';  // Clear previous content
+            for (let key in values) {
+                let value = values[key];
+                modalContent.innerHTML += `
+                    <div>
+                        <label for="edit-${section}-${key}">${key}:</label>
+                        <input type="text" id="edit-${section}-${key}" value="${value}" />
+                    </div>
+                `;
+            }
+            let saveButton = document.getElementById("saveButton");
+            saveButton.onclick = function() {
+                let updatedValues = {};
+                let encodedSection = encodeURIComponent(section);
+                for (let key in values) {
+                    let newValue = document.getElementById("edit-" + section + "-" + key).value;
+                    updatedValues[key] = newValue;
+                    document.getElementById("config-" + section + "-" + key).innerText = newValue;
+                    document.getElementById("input-" + section + "-" + key).value = newValue;
+                }
+                fetch(`update/${encodedSection}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'},
+                    body: JSON.stringify({ section: section, updatedValues: updatedValues })
+        }).then(response => {
+            if (response.ok) {
+                alert('Config updated successfully!');
+                modal.style.display = "none";  // 关闭弹窗
+            } else {
+                alert('Failed to update config.');
+            }
+        });
+                modal.style.display = "none";  // Close the modal after saving
+            };
+
+            modal.style.display = "flex";
+        }
+        // Close modal without saving
+        function closeModal() {
+            let modal = document.getElementById("editModal");
+            modal.style.display = "none";
+        }
+        function deleteConfig(section) {
+            if (confirm("Are you sure you want to delete " + section + "?")) {
+                let encodedSection = encodeURIComponent(section);
+                fetch(`del/${encodedSection}`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+                }).then(response => {
+                    if (response.ok) {
+                        alert('Config deleted successfully!');
+                        window.location.reload(); // 刷新页面
+                    } else {
+                        alert('Failed to delete config.');
+                    }
+                });
+            }
+        }
+        //add config
+        function openAddConfigModal() {
+            let modal = document.getElementById("editModal");
+            let modalContent = document.getElementById("modalContent");
+            modalContent.innerHTML = `
+                <h2>Add New Config</h2>
+                <div>
+                    <label for="section">Section:</label>
+                    <input type="text" id="section" />
+                </div>
+                <div>
+                    <label for="host">Host:</label>
+                    <input type="text" id="host" />
+                </div>
+                <div>
+                    <label for="port">Port:</label>
+                    <input type="text" id="port" />
+                </div>
+                <div>
+                    <label for="username">Username:</label>
+                    <input type="text" id="username" />
+                </div>
+                <div>
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" />
+                </div>
+                <div>
+                    <label for="databasename">Database Name:</label>
+                    <input type="text" id="databasename" />
+                </div>
+                <div>
+                    <label for="type">Type:</label>
+                    <input type="text" id="type" />
+                </div>
+                <div id="key-value-container"></div>
+                <button type="button" onclick="addKeyValueRow()">Add Key-Value</button>
+                <button type="button" onclick="saveConfig()">Save Config</button>
+            `;
+            modal.style.display = "flex";
+        }
+        function closeAddConfigModal() {
+            let modal = document.getElementById("editModal");
+            modal.style.display = "none";
+        }
+        function addKeyValueRow() {
+            let container = document.getElementById("key-value-container");
+            let row = document.createElement("div");
+            row.classList.add("key-value-row");
+
+            row.innerHTML = `
+                <input type="text" placeholder="Key" class="key" />
+                <input type="text" placeholder="Value" class="value" />
+                <span class="delete-row" onclick="deleteRow(this)">Delete</span>
+            `;
+
+            container.appendChild(row);
+        }
+        function deleteRow(button) {
+            let row = button.closest(".key-value-row");
+            row.remove();
+        }
+        function saveConfig() {
+            let config = {
+                section: document.getElementById("section").value,
+                host: document.getElementById("host").value,
+                port: document.getElementById("port").value,
+                username: document.getElementById("username").value,
+                password: document.getElementById("password").value,
+                databasename: document.getElementById("databasename").value,
+                type: document.getElementById("type").value,
+                extraKeys: []
+            };
+
+            let keyValueRows = document.querySelectorAll("#key-value-container .key-value-row");
+            keyValueRows.forEach(row => {
+                let key = row.querySelector(".key").value;
+                let value = row.querySelector(".value").value;
+                if (key && value) {
+                    config.extraKeys.push({ key: key, value: value });
+                }
+            });
+
+            console.log("Config Data to Save:", config);
+
+            fetch('add_config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify(config)
+            }).then(response => {
+                if (response.ok) {
+                    alert('Config added successfully!');
+                    closeAddConfigModal();
+                    window.location.reload();
+                } else {
+                    alert(response);
+                }
+            });
+        }
+    </script>
+</head>
+<body>
+    <h1>Database Resource Configuration</h1>
+    <button id="addConfigButton" onclick="openAddConfigModal()">Add Config</button>
+    <label for="typeFilter">Filter by Type:</label>
+    <select id="typeFilter" onchange="filterConfig()">
+        <option value="all">All</option>
+        {% for value in filt_data %}
+            <option value="{{ value }}">{{ value }}</option>
+        {% endfor %}
+    </select>
+
+    <div class="container">
+        {% for section, values in config_data.items %}
+            {% if values %}
+                <div class="column" id="section-{{ section }}">
+                    <div class="config-section" data-type="{% if values.type %}{{ values.type }}{% else %}''{% endif %}">
+                        <h2>{{ section }}</h2>
+                        <ul>
+                            {% for key, value in values.items %}
+                                <li>
+                                    <strong>{{ key }}:</strong>
+                                    <span id="config-{{ section }}-{{ key }}">{{ value }}</span>
+                                    <input type="hidden" name="{{ section }}_{{ key }}" id="input-{{ section }}-{{ key }}" value="{{ value }}">
+                                </li>
+                            {% endfor %}
+                        </ul>
+                        <div class="config-buttons">
+                            <button type="button" onclick="openEditModal('{{ section }}', {{ values}})">Edit</button>
+                            <button type="button" onclick="deleteConfig('{{ section }}')">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <!-- Modal for editing values -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <h3>Edit Section</h3>
+            <div id="modalContent"></div>
+            <button id="saveButton">Save</button>
+            <button onclick="closeModal()">Cancel</button>
+        </div>
+    </div>
+
+</body>
+</html>

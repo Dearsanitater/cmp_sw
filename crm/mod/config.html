@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Configuration</title>
+</head>
+<body>
+    <h1>Database Resource Configuration</h1>
+
+    {% for section, values in config_data.items %}
+        <h2>{{ section }}</h2>
+        <ul>
+            {% for key, value in values.items %}
+                <li><strong>{{ key }}:</strong> {{ value }}</li>
+            {% endfor %}
+        </ul>
+    {% endfor %}
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Display Data</title>
+    <style>
+        .data-table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        .data-table th, .data-table td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+        .data-table th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Data Output</h1>
+    <div id="data-output"></div>  <!-- 用于显示数据 -->
+</body>
+</html>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+    $.ajax({
+        url: '../ajax/gettxt',  // 替换为你的视图 URL
+        method: 'GET',
+        success: function(data) {
+            console.log('Received data:', data);
+            // 处理 JSON 数据并显示在页面上
+            displayJson(data['cons约束对比']);
+        },
+        error: function(xhr, status, error) {
+            console.error('AJAX Error:', status, error);
+            $('#data-output').text('Error loading data.');  // 显示错误信息
+        }
+    });
+
+    function displayJson(data) {
+        // 创建表格
+        let html = '<table class="data-table">';
+        for (let i = 0; i < data.length; i++) {
+            html += '<tr>';
+            for (let j = 0; j < data[i].length; j++) {
+                // 检查是否为数组
+                if (Array.isArray(data[i][j])) {
+                    html += '<td>' + data[i][j].join(', ') + '</td>';  // 将内部数组元素连接成字符串
+                } else {
+                    html += '<td>' + (data[i][j] !== null ? data[i][j] : '') + '</td>';
+                }
+            }
+            html += '</tr>';
+        }
+        html += '</table>';
+        $('#data-output').html(html);  // 更新页面内容
+    }
+});
+</script>

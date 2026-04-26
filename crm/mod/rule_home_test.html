@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rules Management</title>
+    <style>
+        /* 页面背景和整体布局 */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+
+        /* 容器布局，保证规则的显示自适应 */
+        .container {
+            padding: 20px;
+        }
+
+        /* 新建规则按钮样式 */
+        .new-rule-btn {
+            padding: 12px 24px;
+            font-size: 16px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .get-config {
+            padding: 12px 24px;
+            font-size: 16px;
+            background-color: rgba(40, 137, 167, 0.82);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .new-rule-btn:hover {
+            background-color: #218838;
+        }
+
+        /* 规则列表 */
+        .rules-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        /* 每个规则的布局 */
+        .rule {
+            display: flex;
+            justify-content: space-between; /* 元素横向排列 */
+            align-items: center;
+            background-color: #f9f9f9;  /* 浅灰色背景 */
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s;
+            cursor: pointer;
+        }
+
+        /* 鼠标悬停效果 */
+        .rule:hover {
+            background-color: #e0e0e0;  /* 鼠标悬停时变浅 */
+        }
+
+        /* 规则信息部分 */
+        .rule-info {
+            display: flex;
+            gap: 20px;
+        }
+
+        .rule-info div {
+            font-size: 14px;
+            color: #333;
+        }
+
+        /* 按钮部分 - 超链接样式 */
+        .buttons a {
+            display: inline-block;
+            padding: 6px 12px;
+            font-size: 14px;
+            color: #007bff;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+
+        /* 鼠标悬停按钮效果 */
+        .buttons a:hover {
+            background-color: #d1e7ff;
+        }
+
+        /* 适应屏幕宽度的响应式布局 */
+        @media (max-width: 768px) {
+            .rule-info {
+                flex-direction: column;  /* 小屏幕上规则信息竖直排列 */
+            }
+
+            .buttons a {
+                font-size: 12px;
+            }
+        }
+
+        /* 实时回传信息区域 */
+        .details {
+        margin-top: 10px;
+        padding: 100px;
+        border: 1px solid #ddd;
+        background-color: #f9f9f9;
+        height: 100px;  /* 设置下拉窗口的高度 */
+        overflow-y: auto;
+        display: none;
+        position: relative;  /* 为了定位按钮 */
+    }
+
+        /* 修改后的超链接按钮样式 */
+    .details a {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        font-size: 14px;
+        color: #007bff;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+
+    /* 悬停效果 */
+    .details a:hover {
+        color: #0056b3;
+    }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- 新建规则按钮 -->
+        <button class="new-rule-btn" onclick="createRule()">New Rule</button>
+        <button class="get-config" onclick="getConfig()">Show DataBase Source</button>
+        <button class="get-config" onclick="getDetail()">Report / Detail</button>
+        <button class="get-config" onclick="goHbase()">Select Hbase</button>
+        <!-- 规则列表 -->
+        <div class="rules-list">
+            {% for rule_id, rule in rules.items %}
+            <div class="rule" onclick="toggleDetails('{{ rule.rule_id }}')">
+                <!-- 规则信息部分 -->
+                <div class="rule-info">
+                    <div><strong>User ID:</strong> {{ rule.user_id }}</div>
+                    <div><strong>Rule Name:</strong> {{ rule.rule_name }}</div>
+                    <div><strong>Source:</strong> {{ rule.src }}</div>
+                    <div><strong>Target:</strong> {{ rule.tgt }}</div>
+                </div>
+                <!-- 按钮部分 -->
+                <div class="buttons">
+                    <a href="javascript:void(0)" onclick="editRule('{{ rule.rule_id }}')">Edit</a>
+                    <a href="javascript:void(0)" onclick="deleteRule('{{ rule.rule_id }}')">Delete</a>
+                    <a href="javascript:void(0)" onclick="executeScript('{{ rule.rule_id }}')">Execute Script</a>
+                    <a href="javascript:void(0)" onclick="pauseTask('{{ rule.rule_id }}')">Pause</a>
+                    <a href="javascript:void(0)" onclick="resumeTask('{{ rule.rule_id }}')">Resume</a>
+                    <a href="javascript:void(0)" onclick="executeShut('{{ rule.rule_id }}')">SHuT</a>
+                    <a href="javascript:void(0)" onclick="executeCompare('{{ rule.rule_id }}')">Compare</a>
+                    <a href="javascript:void(0)" onclick="clearSource('{{ rule.rule_id }}')">Clear Source</a>
+                </div>
+            </div>
+            <!-- 空白区域，用于显示实时回传信息 -->
+            <div id="details-{{ rule.rule_id }}" class="details">
+                <pre id="log-{{ rule.rule_id }}"></pre>
+                <!-- 跳转按钮 -->
+                <a href="javascript:void(0)" onclick="window.location.href='/rule/detail/{{ rule.rule_id }}'">Report - Detail</a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script>
+        function createRule() {
+            window.location.href = "create_rule/";
+        }
+        function getConfig() {
+            window.location.href = "../config/";
+        }
+        function getDetail() {
+            window.location.href = "detail/0/";
+        }
+        function goHbase() {
+            window.location.href = "/select/hbase";
+        }
+        function editRule(ruleId) {
+            window.location.href = `ch_rule/${ruleId}/`;
+        }
+        function getCsrfToken() {
+            return "{{ csrf_token }}";
+        }
+        function processMessage(ruleId, message) {
+            const logDiv = document.getElementById(`log-${ruleId}`);
+            if (!logDiv) {
+                return;
+            }
+            const currentTime = new Date().toLocaleTimeString();
+            logDiv.textContent += `[${currentTime}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        function formatTaskMessage(payload) {
+            if (!payload) {
+                return "未返回任务信息";
+            }
+            const task = payload.task || {};
+            const parts = [];
+            if (payload.message) {
+                parts.push(payload.message);
+            }
+            if (task.task_type) {
+                parts.push(`type=${task.task_type}`);
+            }
+            if (task.status) {
+                parts.push(`status=${task.status}`);
+            }
+            if (task.pid) {
+                parts.push(`pid=${task.pid}`);
+            }
+            return parts.join(" | ");
+        }
+        async function callTaskApi(url, method = "POST") {
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    "X-CSRFToken": getCsrfToken(),
+                    "X-Requested-With": "XMLHttpRequest",
+                    "Accept": "application/json"
+                }
+            });
+            const payload = await response.json();
+            if (!response.ok || payload.status === "error" || payload.error) {
+                throw new Error(payload.message || payload.error || "请求失败");
+            }
+            return payload;
+        }
+        function deleteRule(ruleId) {
+            if (confirm("Are you sure you want to delete this rule?")) {
+                fetch(`del_rule/${ruleId}/`, {
+                    method: "POST",
+                    headers: { "X-CSRFToken": getCsrfToken() }
+                }).then(response => {
+                    if (response.ok) {
+                        alert("Rule deleted successfully!");
+                        window.location.reload();
+                    } else {
+                        alert("Failed to delete rule.");
+                    }
+                });
+            }
+        }
+        async function executeScript(ruleId) {
+            try {
+                const payload = await callTaskApi(`exec/${ruleId}/`);
+                const message = formatTaskMessage(payload);
+                processMessage(ruleId, message);
+                alert(message);
+            } catch (err) {
+                alert(`启动脚本失败: ${err.message}`);
+            }
+        }
+        async function executeCompare(ruleId) {
+            try {
+                const payload = await callTaskApi(`comp/${ruleId}/`);
+                const message = formatTaskMessage(payload);
+                processMessage(ruleId, message);
+                alert(message);
+            } catch (err) {
+                alert(`启动比对失败: ${err.message}`);
+            }
+        }
+        async function executeShut(ruleId) {
+            try {
+                const payload = await callTaskApi(`shut/${ruleId}/`);
+                const message = formatTaskMessage(payload);
+                processMessage(ruleId, message);
+                alert(message);
+            } catch (err) {
+                alert(`停止任务失败: ${err.message}`);
+            }
+        }
+        async function pauseTask(ruleId) {
+            try {
+                const payload = await callTaskApi(`pause/${ruleId}/`);
+                processMessage(ruleId, formatTaskMessage(payload));
+            } catch (err) {
+                alert(`暂停失败: ${err.message}`);
+            }
+        }
+        async function resumeTask(ruleId) {
+            try {
+                const payload = await callTaskApi(`resume/${ruleId}/`);
+                processMessage(ruleId, formatTaskMessage(payload));
+            } catch (err) {
+                alert(`继续失败: ${err.message}`);
+            }
+        }
+
+        async function killTask(ruleId) {
+            try {
+                const payload = await callTaskApi(`kill/${ruleId}/`);
+                processMessage(ruleId, formatTaskMessage(payload));
+            } catch (err) {
+                alert(`杀停失败: ${err.message}`);
+            }
+        }
+        async function queryTaskStatus(ruleId) {
+            try {
+                const payload = await callTaskApi(`status/${ruleId}/`, "GET");
+                const message = formatTaskMessage(payload);
+                processMessage(ruleId, message);
+                return payload;
+            } catch (err) {
+                alert(`获取状态失败: ${err.message}`);
+                return null;
+            }
+        }
+        function clearSource(ruleId) {
+            alert(`Clearing source for rule ${ruleId}`);
+        }
+        function toggleDetails(ruleId) {
+            const detailsDiv = document.getElementById(`details-${ruleId}`);
+            if (detailsDiv.style.display === "none" || detailsDiv.style.display === "") {
+                detailsDiv.style.display = "block";
+            } else {
+                detailsDiv.style.display = "none";
+            }
+        }
+        function connectWebSocket() {
+            const socket = new WebSocket(`ws://192.168.62.130:8000/ws/message/`);
+            socket.onmessage = function (event) {
+                const data = JSON.parse(event.data);
+
+                processMessage(data.rule_id, data.message);
+            };
+            socket.onclose = function () {
+                console.error("WebSocket closed unexpectedly");
+            };
+        }
+        document.addEventListener("DOMContentLoaded", function () {
+            connectWebSocket();
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Django Logs</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            color: #222;
+        }
+
+        .page {
+            display: grid;
+            grid-template-columns: 360px minmax(0, 1fr);
+            gap: 12px;
+            height: 100vh;
+            padding: 12px;
+            box-sizing: border-box;
+        }
+
+        .panel {
+            min-height: 0;
+            border: 1px solid #d8dde3;
+            border-radius: 6px;
+            background: #fff;
+            overflow: auto;
+        }
+
+        .head {
+            position: sticky;
+            top: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 10px;
+            border-bottom: 1px solid #e5e8ec;
+            background: #fff;
+            font-weight: 700;
+        }
+
+        .tree {
+            padding: 8px;
+        }
+
+        .entry {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 8px;
+            align-items: center;
+            padding: 5px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .entry:hover {
+            background: #eef5ff;
+        }
+
+        .entry-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .dir {
+            color: #495057;
+            font-weight: 700;
+        }
+
+        .file {
+            color: #0056b3;
+            cursor: pointer;
+        }
+
+        .meta {
+            color: #6c757d;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .viewer {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .log-content {
+            flex: 1;
+            margin: 0;
+            padding: 12px;
+            overflow: auto;
+            background: #fbfcfd;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-size: 13px;
+            line-height: 1.45;
+        }
+
+        a,
+        button {
+            color: #0069d9;
+            font-size: 13px;
+            text-decoration: none;
+        }
+
+        .download {
+            padding: 5px 8px;
+            border-radius: 4px;
+            background: #287fa7;
+            color: #fff;
+        }
+
+        @media (max-width: 900px) {
+            .page {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+
+            .panel {
+                min-height: 320px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <section class="panel">
+            <div class="head">
+                <span>crm/django_logs</span>
+                <a href="/rule/test/">Back</a>
+            </div>
+            <div class="tree">
+                {% for entry in entries %}
+                    {% if entry.type == 'dir' %}
+                        <div class="entry dir" style="padding-left: {{ entry.depth }}em;">
+                            <span class="entry-name">[{{ entry.name }}]</span>
+                            <span class="meta"></span>
+                        </div>
+                    {% else %}
+                        <div class="entry file" style="padding-left: {{ entry.depth }}em;" data-path="{{ entry.rel_path }}" ondblclick="viewLog(this.dataset.path)">
+                            <span class="entry-name">{{ entry.name }}</span>
+                            <span class="meta">{{ entry.size }} B&nbsp;&nbsp;{{ entry.mtime }}</span>
+                        </div>
+                    {% endif %}
+                {% empty %}
+                    <div class="entry">No log files.</div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="panel viewer">
+            <div class="head">
+                <span>{{ selected|default:"Double-click a log file to view" }}</span>
+                {% if selected %}
+                    <a class="download" href="/logs/?file={{ selected|urlencode }}&download=1">Download</a>
+                {% endif %}
+            </div>
+            <pre class="log-content">{{ content }}</pre>
+        </section>
+    </div>
+
+    <script>
+        function viewLog(path) {
+            window.location.href = `/logs/?file=${encodeURIComponent(path)}`;
+        }
+    </script>
+</body>
+</html>

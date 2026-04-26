@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HBase Browser</title>
+    <style>
+        :root {
+            --bg: #f6f8fa;
+            --panel: #ffffff;
+            --border: #d0d7de;
+            --muted: #57606a;
+            --text: #1f2328;
+            --accent: rgba(9, 107, 218, 0.86);
+            --accent-soft: #ddf4ff;
+            --editor-height: 38%;
+            --sidebar-width: 300px;
+            --shadow: 0 1px 2px rgba(31, 35, 40, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: linear-gradient(180deg, #eef2f6 0%, #f7f9fb 100%);
+            color: var(--text);
+        }
+
+        .page {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+            gap: 16px;
+        }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 14px 18px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(208, 215, 222, 0.8);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(12px);
+        }
+
+        .toolbar h1 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .toolbar p {
+            margin: 4px 0 0;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .toolbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        select,
+        button,
+        input {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        select,
+        input {
+            min-width: 220px;
+            padding: 10px 12px;
+            background: #fff;
+        }
+
+        button {
+            padding: 10px 14px;
+            cursor: pointer;
+            background: #fff;
+            color: var(--text);
+            transition: 0.18s ease;
+        }
+
+        button.primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        button.sec {
+            background-color: rgba(40, 137, 167, 0.82);
+
+
+            color: #fff;
+        }
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(9, 105, 218, 0.12);
+        }
+
+        .workspace {
+            min-height: 0;
+            flex: 1;
+            display: grid;
+            grid-template-columns: minmax(220px, var(--sidebar-width)) 10px minmax(0, 1fr);
+            gap: 16px;
+        }
+
+        .panel {
+            min-height: 0;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .panel-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 14px 16px;
+            border-bottom: 1px solid #eaeef2;
+            background: linear-gradient(180deg, #ffffff 0%, #f9fbfd 100%);
+        }
+
+        .panel-title {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .panel-subtitle {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .sidebar-resizer {
+            width: 10px;
+            cursor: col-resize;
+            border-radius: 999px;
+            background:
+                linear-gradient(180deg, transparent 0%, transparent 30%, #c7d2de 30%, #c7d2de 70%, transparent 70%, transparent 100%);
+        }
+
+        .tree-wrap {
+            padding: 12px;
+            overflow: auto;
+            flex: 1;
+        }
+
+        .empty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--muted);
+            font-size: 14px;
+            text-align: center;
+            padding: 24px;
+        }
+
+        .conn-card {
+            border: 1px solid #eaeef2;
+            border-radius: 14px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .conn-header,
+        .node-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 8px 12px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .conn-header {
+            background: #f8fafc;
+            border-bottom: 1px solid #eef2f6;
+        }
+
+        .node-header:hover,
+        .conn-header:hover,
+        .table-item:hover {
+            background: #f6f8fa;
+        }
+
+        .conn-name,
+        .node-title {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .conn-meta,
+        .table-meta {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .tree-list {
+            list-style: none;
+            margin: 0;
+            padding: 6px 10px 8px 10px;
+        }
+
+        .tree-list ul {
+            list-style: none;
+            margin: 6px 0 0 18px;
+            padding: 0;
+            border-left: 1px dashed #d8dee4;
+        }
+
+        .tree-list.collapsed,
+        .tree-list ul.collapsed {
+            display: none;
+        }
+
+        .table-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            min-height: 30px;
+            padding: 5px 10px;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        .table-item .mono {
+            font-size: 12px;
+            line-height: 1.25;
+        }
+
+        .table-item.active {
+            background: var(--accent-soft);
+            color: #0550ae;
+        }
+
+        .tree-toggle {
+            min-width: 40px;
+            text-align: right;
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .workspace-main {
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .vertical-stack {
+            min-height: 0;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .editor-pane {
+            height: var(--editor-height);
+            min-height: 160px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .drag-divider {
+            height: 10px;
+            cursor: row-resize;
+            background:
+                linear-gradient(90deg, transparent 0%, transparent 35%, #c7d2de 35%, #c7d2de 65%, transparent 65%, transparent 100%);
+            border-top: 1px solid #eef2f6;
+            border-bottom: 1px solid #eef2f6;
+        }
+
+        .data-pane {
+            min-height: 220px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .editor-shell {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: #f6f8fa;
+        }
+
+        .editor-topbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border-bottom: 1px solid #d8dee4;
+            background: #ffffff;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+        }
+
+        .dot.red { background: #ff5f57; }
+        .dot.yellow { background: #febc2e; }
+        .dot.green { background: #28c840; }
+
+        .editor-file {
+            margin-left: 8px;
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .editor-textarea {
+            flex: 1;
+            width: 100%;
+            border: 0;
+            resize: none;
+            outline: none;
+            padding: 18px;
+            font: 14px/1.6 "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+            color: #24292f;
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.7) 0%, rgba(246,248,250,1) 16%),
+                repeating-linear-gradient(
+                    180deg,
+                    transparent 0,
+                    transparent 27px,
+                    rgba(208, 215, 222, 0.35) 28px
+                );
+        }
+
+        .result-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 12px 16px;
+            border-bottom: 1px solid #eef2f6;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: #f6f8fa;
+            border: 1px solid #e1e7ee;
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .status-pill::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            background: #1f883d;
+        }
+
+        .result-body {
+            min-height: 0;
+            overflow: auto;
+            background: #fff;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        thead th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            text-align: left;
+            padding: 10px 12px;
+            background: #f6f8fa;
+            border-bottom: 1px solid #d8dee4;
+            white-space: nowrap;
+        }
+
+        tbody td {
+            padding: 9px 12px;
+            border-bottom: 1px solid #eef2f6;
+            vertical-align: top;
+            word-break: break-all;
+        }
+
+        tbody tr:hover {
+            background: #f6f8fa;
+        }
+
+        .mono {
+            font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+        }
+
+        .muted {
+            color: var(--muted);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 1080px) {
+            .workspace {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                max-height: 260px;
+            }
+
+            .sidebar-resizer {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <section class="toolbar panel">
+        <div>
+            <h1>HBase Browser</h1>
+            <p>选择 DB.ini 中的 HBase 数据源，建立连接后在左侧浏览表，双击表名读取前 200 行。</p>
+        </div>
+        <div class="toolbar-actions">
+            <a href="/rule">
+                <button class="sec" type="button">比对</button></a>
+            <button class="sec" id="goConfig" type="button">查看全部数据源</button>
+            <select id="sourceSelect">
+                <option value="">加载中...</option>
+            </select>
+            <button class="primary" id="connectBtn" type="button">连接</button>
+        </div>
+    </section>
+
+    <section class="workspace">
+        <aside class="sidebar panel">
+            <div class="panel-head">
+                <div>
+                    <div class="panel-title">连接列表</div>
+                    <div class="panel-subtitle">连接后会显示 namespace 与表</div>
+                </div>
+            </div>
+            <div class="tree-wrap" id="treeWrap">
+                <div class="empty">先选择一个 HBase 数据源并点击“连接”</div>
+            </div>
+        </aside>
+
+        <div class="sidebar-resizer" id="sidebarDivider" title="拖拽调整左侧连接列表宽度"></div>
+
+        <main class="workspace-main panel">
+            <div class="vertical-stack" id="verticalStack">
+                <section class="editor-pane">
+                    <div class="panel-head">
+                        <div>
+                            <div class="panel-title">编辑区</div>
+                            <div class="panel-subtitle">当前只保留外观与占位，后续可接 SQL 或查询脚本。</div>
+                        </div>
+                    </div>
+                    <div class="editor-shell">
+                        <div class="editor-topbar">
+                            <span class="dot red"></span>
+                            <span class="dot yellow"></span>
+                            <span class="dot green"></span>
+                            <span class="editor-file mono">scratch.sql</span>
+                        </div>
+                        <textarea class="editor-textarea" spellcheck="false">-- 该输入框暂时没什么用</textarea>
+                    </div>
+                </section>
+
+                <div class="drag-divider" id="dragDivider" title="拖拽调整上下区域高度"></div>
+
+                <section class="data-pane">
+                    <div class="result-toolbar">
+                        <div>
+                            <div class="panel-title" id="resultTitle">表数据结果区</div>
+                            <div class="panel-subtitle" id="resultSubtitle">双击左侧表名后开始读取</div>
+                        </div>
+                        <div class="status-pill" id="streamStatus">等待读取</div>
+                    </div>
+                    <div class="result-body" id="resultBody">
+                        <div class="empty" id="resultEmpty">当前没有表数据，双击左侧某个表即可开始加载。</div>
+                        <table class="hidden" id="resultTable">
+                            <thead id="resultHead"></thead>
+                            <tbody id="resultRows"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </section>
+</div>
+
+<script>
+    const state = {
+        connections: new Map(),
+        activeDb: null,
+        activeNamespace: null,
+        activeTable: null,
+        rows: [],
+        columns: ["__rowkey__"],
+        renderScheduled: false,
+        scanController: null,
+        collapsedConnections: new Set(),
+        collapsedNamespaces: new Set(),
+        loadingNamespaces: new Set(),
+    };
+
+    const sourceSelect = document.getElementById("sourceSelect");
+    const connectBtn = document.getElementById("connectBtn");
+    const goConfig = document.getElementById("goConfig");
+    const treeWrap = document.getElementById("treeWrap");
+    const resultTitle = document.getElementById("resultTitle");
+    const resultSubtitle = document.getElementById("resultSubtitle");
+    const resultEmpty = document.getElementById("resultEmpty");
+    const resultTable = document.getElementById("resultTable");
+    const resultHead = document.getElementById("resultHead");
+    const resultRows = document.getElementById("resultRows");
+    const streamStatus = document.getElementById("streamStatus");
+
+    async function loadSources() {
+        try {
+            const response = await fetch("/select/hbase/sources");
+            const payload = await response.json();
+            const sources = payload.sources || [];
+            sourceSelect.innerHTML = "";
+            if (!sources.length) {
+                sourceSelect.innerHTML = '<option value="">没有可用的 HBase 数据源</option>';
+                return;
+            }
+            for (const source of sources) {
+                const option = document.createElement("option");
+                option.value = source.name;
+                option.textContent = `${source.name}  (${source.namespace})`;
+                sourceSelect.appendChild(option);
+            }
+        } catch (error) {
+            sourceSelect.innerHTML = '<option value="">加载失败</option>';
+            streamStatus.textContent = `加载数据源失败: ${error.message}`;
+        }
+    }
+
+    async function connectSource() {
+        const dbname = sourceSelect.value;
+        if (!dbname) {
+            return;
+        }
+        streamStatus.textContent = `正在连接 ${dbname}`;
+        connectBtn.disabled = true;
+        try {
+            const connectResp = await fetch(`/select/hbase/connect?dbname=${encodeURIComponent(dbname)}`);
+            const connectPayload = await connectResp.json();
+            if (connectPayload.status !== "success") {
+                throw new Error(connectPayload.message || "连接失败");
+            }
+
+            const treeResp = await fetch(`/select/hbase/tree?dbname=${encodeURIComponent(dbname)}`);
+            const treePayload = await treeResp.json();
+            if (treePayload.status !== "success") {
+                throw new Error(treePayload.message || "读取表结构失败");
+            }
+
+            state.connections.set(dbname, treePayload);
+            renderTree();
+            streamStatus.textContent = `已连接 ${dbname}，共 ${treePayload.tables.length} 张表`;
+        } catch (error) {
+            streamStatus.textContent = `连接失败: ${error.message}`;
+        } finally {
+            connectBtn.disabled = false;
+        }
+    }
+
+    function renderTree() {
+        if (!state.connections.size) {
+            treeWrap.innerHTML = '<div class="empty">先选择一个 HBase 数据源并点击“连接”</div>';
+            return;
+        }
+
+        treeWrap.innerHTML = "";
+        for (const [dbname, info] of state.connections.entries()) {
+            const card = document.createElement("div");
+            card.className = "conn-card";
+
+            const header = document.createElement("div");
+            header.className = "conn-header";
+            header.innerHTML = `
+                <div>
+                    <div class="conn-name">${dbname}</div>
+                    <div class="conn-meta">${info.namespace} · ${info.tables.length} tables</div>
+                </div>
+                <div class="conn-meta">已连接</div>
+            `;
+
+            const list = document.createElement("div");
+            list.className = "tree-list";
+
+            const namespaceBlock = document.createElement("div");
+            const nsHeader = document.createElement("div");
+            nsHeader.className = "node-header";
+            nsHeader.innerHTML = `
+                <div>
+                    <div class="node-title">${info.namespace}</div>
+                    <div class="table-meta">Namespace</div>
+                </div>
+                <div class="table-meta">展开</div>
+            `;
+
+            const tableList = document.createElement("ul");
+            for (const table of info.tables) {
+                const item = document.createElement("li");
+                item.className = "table-item";
+                if (state.activeDb === dbname && state.activeTable === table) {
+                    item.classList.add("active");
+                }
+                item.innerHTML = `
+                    <span class="mono">${table}</span>
+                    
+                `;
+                item.addEventListener("dblclick", () => openTable(dbname, table));
+                tableList.appendChild(item);
+            }
+
+            namespaceBlock.appendChild(nsHeader);
+            namespaceBlock.appendChild(tableList);
+            list.appendChild(namespaceBlock);
+            card.appendChild(header);
+            card.appendChild(list);
+            treeWrap.appendChild(card);
+        }
+    }
+
+    renderTree = function() {
+        if (!state.connections.size) {
+            treeWrap.innerHTML = '<div class="empty">先选择一个 HBase 数据源并点击“连接”</div>';
+            return;
+        }
+
+        treeWrap.innerHTML = "";
+        for (const [dbname, info] of state.connections.entries()) {
+            const connKey = `${dbname}`;
+            const nsKey = `${dbname}:${info.namespace}`;
+            const card = document.createElement("div");
+            card.className = "conn-card";
+
+            const header = document.createElement("div");
+            header.className = "conn-header";
+            header.innerHTML = `
+                <div>
+                    <div class="conn-name">${dbname}</div>
+                    <div class="conn-meta">${info.namespace} / ${info.tables.length} tables</div>
+                </div>
+                <div class="tree-toggle">${state.collapsedConnections.has(connKey) ? "展开" : "收起"}</div>
+            `;
+
+            const list = document.createElement("div");
+            list.className = "tree-list";
+            if (state.collapsedConnections.has(connKey)) {
+                list.classList.add("collapsed");
+            }
+
+            const namespaceBlock = document.createElement("div");
+            const nsHeader = document.createElement("div");
+            nsHeader.className = "node-header";
+            nsHeader.innerHTML = `
+                <div>
+                    <div class="node-title">${info.namespace}</div>
+                    <div class="table-meta">Namespace</div>
+                </div>
+                <div class="tree-toggle">${state.collapsedNamespaces.has(nsKey) ? "展开" : "收起"}</div>
+            `;
+
+            const tableList = document.createElement("ul");
+            if (state.collapsedNamespaces.has(nsKey)) {
+                tableList.classList.add("collapsed");
+            }
+
+            for (const table of info.tables) {
+                const item = document.createElement("li");
+                item.className = "table-item";
+                if (state.activeDb === dbname && state.activeTable === table) {
+                    item.classList.add("active");
+                }
+                item.innerHTML = `
+                    <span class="mono">${table}</span>
+                `;
+                item.addEventListener("dblclick", () => openTable(dbname, table));
+                tableList.appendChild(item);
+            }
+
+            header.addEventListener("click", () => {
+                if (state.collapsedConnections.has(connKey)) {
+                    state.collapsedConnections.delete(connKey);
+                } else {
+                    state.collapsedConnections.add(connKey);
+                }
+                renderTree();
+            });
+
+            nsHeader.addEventListener("click", () => {
+                if (state.collapsedNamespaces.has(nsKey)) {
+                    state.collapsedNamespaces.delete(nsKey);
+                } else {
+                    state.collapsedNamespaces.add(nsKey);
+                }
+                renderTree();
+            });
+
+            namespaceBlock.appendChild(nsHeader);
+            namespaceBlock.appendChild(tableList);
+            list.appendChild(namespaceBlock);
+            card.appendChild(header);
+            card.appendChild(list);
+            treeWrap.appendChild(card);
+        }
+    };
+
+    function resetTableState() {
+        state.rows = [];
+        state.columns = ["__rowkey__"];
+        resultHead.innerHTML = "";
+        resultRows.innerHTML = "";
+        resultEmpty.classList.remove("hidden");
+        resultTable.classList.add("hidden");
+    }
+
+    function scheduleRender() {
+        if (state.renderScheduled) {
+            return;
+        }
+        state.renderScheduled = true;
+        requestAnimationFrame(() => {
+            state.renderScheduled = false;
+            renderTable();
+        });
+    }
+
+    function renderTable() {
+        if (!state.rows.length) {
+            resultEmpty.classList.remove("hidden");
+            resultTable.classList.add("hidden");
+            return;
+        }
+
+        resultEmpty.classList.add("hidden");
+        resultTable.classList.remove("hidden");
+
+        const headRow = document.createElement("tr");
+        for (const column of state.columns) {
+            const th = document.createElement("th");
+            th.textContent = column;
+            headRow.appendChild(th);
+        }
+        resultHead.innerHTML = "";
+        resultHead.appendChild(headRow);
+
+        resultRows.innerHTML = "";
+        for (const row of state.rows) {
+            const tr = document.createElement("tr");
+            for (const column of state.columns) {
+                const td = document.createElement("td");
+                td.textContent = row[column] ?? "";
+                tr.appendChild(td);
+            }
+            resultRows.appendChild(tr);
+        }
+    }
+
+    function consumeMessage(message) {
+        if (message.type === "meta") {
+            resultTitle.textContent = `${message.dbname} / ${message.table}`;
+            resultSubtitle.textContent = `namespace=${message.namespace}，默认读取前 ${message.limit} 行`;
+            streamStatus.textContent = "开始读取";
+            return;
+        }
+
+        if (message.type === "row") {
+            for (const key of Object.keys(message.row)) {
+                if (!state.columns.includes(key)) {
+                    state.columns.push(key);
+                }
+            }
+            state.rows.push(message.row);
+            streamStatus.textContent = `已接收 ${state.rows.length} 行`;
+            scheduleRender();
+            return;
+        }
+
+        if (message.type === "done") {
+            streamStatus.textContent = `读取完成，共 ${message.rows} 行`;
+            scheduleRender();
+            return;
+        }
+
+        if (message.type === "error") {
+            streamStatus.textContent = `读取失败: ${message.message}`;
+        }
+    }
+
+    async function openTable(dbname, table) {
+        if (state.scanController) {
+            state.scanController.abort();
+        }
+
+        state.activeDb = dbname;
+        state.activeTable = table;
+        renderTree();
+        resetTableState();
+        streamStatus.textContent = "准备读取";
+
+        const controller = new AbortController();
+        state.scanController = controller;
+
+        try {
+            const response = await fetch(
+                `/select/hbase/scan?dbname=${encodeURIComponent(dbname)}&table=${encodeURIComponent(table)}&limit=200`,
+                { signal: controller.signal }
+            );
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let buffer = "";
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) {
+                    break;
+                }
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split("\n");
+                buffer = lines.pop();
+
+                for (const line of lines) {
+                    if (!line.trim()) {
+                        continue;
+                    }
+                    consumeMessage(JSON.parse(line));
+                }
+            }
+
+            if (buffer.trim()) {
+                consumeMessage(JSON.parse(buffer));
+            }
+        } catch (error) {
+            if (error.name === "AbortError") {
+                streamStatus.textContent = "读取已切换到其他表";
+                return;
+            }
+            streamStatus.textContent = `读取失败: ${error.message}`;
+        }
+    }
+
+    connectSource = async function() {
+        const dbname = sourceSelect.value;
+        if (!dbname) {
+            return;
+        }
+        streamStatus.textContent = `正在连接 ${dbname}`;
+        connectBtn.disabled = true;
+        try {
+            const connectResp = await fetch(`/select/hbase/connect?dbname=${encodeURIComponent(dbname)}`);
+            const connectPayload = await connectResp.json();
+            if (connectPayload.status !== "success") {
+                throw new Error(connectPayload.message || "连接失败");
+            }
+            const namespaces = (connectPayload.namespaces || []).map((name) => ({
+                name,
+                tables: null,
+            }));
+            state.connections.set(dbname, {
+                dbname,
+                namespaces,
+            });
+            renderTree();
+            streamStatus.textContent = `已连接 ${dbname}，共 ${namespaces.length} 个 namespace`;
+        } catch (error) {
+            streamStatus.textContent = `连接失败: ${error.message}`;
+        } finally {
+            connectBtn.disabled = false;
+        }
+    };
+
+    async function loadNamespaceTables(dbname, namespaceName) {
+        const connection = state.connections.get(dbname);
+        if (!connection) {
+            return;
+        }
+        const namespace = connection.namespaces.find((item) => item.name === namespaceName);
+        const nsKey = `${dbname}:${namespaceName}`;
+        if (!namespace || namespace.tables !== null || state.loadingNamespaces.has(nsKey)) {
+            return;
+        }
+        state.loadingNamespaces.add(nsKey);
+        renderTree();
+        streamStatus.textContent = `正在读取 ${dbname} / ${namespaceName} 的表`;
+        try {
+            const treeResp = await fetch(
+                `/select/hbase/tree?dbname=${encodeURIComponent(dbname)}&namespace=${encodeURIComponent(namespaceName)}`
+            );
+            const treePayload = await treeResp.json();
+            if (treePayload.status !== "success") {
+                throw new Error(treePayload.message || "读取表列表失败");
+            }
+            namespace.tables = treePayload.tables || [];
+            state.connections.set(dbname, connection);
+            streamStatus.textContent = `${dbname} / ${namespaceName} 共 ${namespace.tables.length} 张表`;
+        } catch (error) {
+            streamStatus.textContent = `读取表列表失败: ${error.message}`;
+        } finally {
+            state.loadingNamespaces.delete(nsKey);
+            renderTree();
+        }
+    }
+
+    renderTree = function() {
+        if (!state.connections.size) {
+            treeWrap.innerHTML = '<div class="empty">先选择一个 HBase 数据源并点击“连接”</div>';
+            return;
+        }
+
+        treeWrap.innerHTML = "";
+        for (const [dbname, info] of state.connections.entries()) {
+            const connKey = `${dbname}`;
+            const card = document.createElement("div");
+            card.className = "conn-card";
+
+            const header = document.createElement("div");
+            header.className = "conn-header";
+            header.innerHTML = `
+                <div>
+                    <div class="conn-name">${dbname}</div>
+                    <div class="conn-meta">${info.namespaces.length} namespaces</div>
+                </div>
+                <div class="tree-toggle">${state.collapsedConnections.has(connKey) ? "展开" : "收起"}</div>
+            `;
+
+            const list = document.createElement("div");
+            list.className = "tree-list";
+            if (state.collapsedConnections.has(connKey)) {
+                list.classList.add("collapsed");
+            }
+
+            header.addEventListener("click", () => {
+                if (state.collapsedConnections.has(connKey)) {
+                    state.collapsedConnections.delete(connKey);
+                } else {
+                    state.collapsedConnections.add(connKey);
+                }
+                renderTree();
+            });
+
+            for (const namespace of info.namespaces) {
+                const nsKey = `${dbname}:${namespace.name}`;
+                const namespaceBlock = document.createElement("div");
+                const nsHeader = document.createElement("div");
+                nsHeader.className = "node-header";
+                const loadedText = namespace.tables === null
+                    ? (state.loadingNamespaces.has(nsKey) ? "加载中" : "双击加载表")
+                    : `${namespace.tables.length} tables`;
+                nsHeader.innerHTML = `
+                    <div>
+                        <div class="node-title">${namespace.name}</div>
+                        <div class="table-meta">${loadedText}</div>
+                    </div>
+                    <div class="tree-toggle">${state.collapsedNamespaces.has(nsKey) ? "展开" : "收起"}</div>
+                `;
+
+                const tableList = document.createElement("ul");
+                if (state.collapsedNamespaces.has(nsKey)) {
+                    tableList.classList.add("collapsed");
+                }
+
+                if (Array.isArray(namespace.tables)) {
+                    for (const table of namespace.tables) {
+                        const item = document.createElement("li");
+                        item.className = "table-item";
+                        if (state.activeDb === dbname && state.activeNamespace === namespace.name && state.activeTable === table) {
+                            item.classList.add("active");
+                        }
+                        item.innerHTML = `<span class="mono">${table}</span>`;
+                        item.addEventListener("dblclick", () => openTable(dbname, namespace.name, table));
+                        tableList.appendChild(item);
+                    }
+                }
+
+                nsHeader.addEventListener("click", () => {
+                    if (state.collapsedNamespaces.has(nsKey)) {
+                        state.collapsedNamespaces.delete(nsKey);
+                    } else {
+                        state.collapsedNamespaces.add(nsKey);
+                    }
+                    renderTree();
+                });
+                nsHeader.addEventListener("dblclick", async (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    state.collapsedNamespaces.delete(nsKey);
+                    await loadNamespaceTables(dbname, namespace.name);
+                });
+
+                namespaceBlock.appendChild(nsHeader);
+                namespaceBlock.appendChild(tableList);
+                list.appendChild(namespaceBlock);
+            }
+
+            card.appendChild(header);
+            card.appendChild(list);
+            treeWrap.appendChild(card);
+        }
+    };
+
+    openTable = async function(dbname, namespace, table) {
+        if (state.scanController) {
+            state.scanController.abort();
+        }
+
+        state.activeDb = dbname;
+        state.activeNamespace = namespace;
+        state.activeTable = table;
+        renderTree();
+        resetTableState();
+        streamStatus.textContent = "准备读取";
+
+        const controller = new AbortController();
+        state.scanController = controller;
+
+        try {
+            const response = await fetch(
+                `/select/hbase/scan?dbname=${encodeURIComponent(dbname)}&namespace=${encodeURIComponent(namespace)}&table=${encodeURIComponent(table)}&limit=200`,
+                { signal: controller.signal }
+            );
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let buffer = "";
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) {
+                    break;
+                }
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split("\n");
+                buffer = lines.pop();
+
+                for (const line of lines) {
+                    if (!line.trim()) {
+                        continue;
+                    }
+                    consumeMessage(JSON.parse(line));
+                }
+            }
+
+            if (buffer.trim()) {
+                consumeMessage(JSON.parse(buffer));
+            }
+        } catch (error) {
+            if (error.name === "AbortError") {
+                streamStatus.textContent = "读取已切换到其他表";
+                return;
+            }
+            streamStatus.textContent = `读取失败: ${error.message}`;
+        }
+    };
+
+    function setupResizer() {
+        const divider = document.getElementById("dragDivider");
+        const stack = document.getElementById("verticalStack");
+        let dragging = false;
+
+        divider.addEventListener("mousedown", () => {
+            dragging = true;
+            document.body.style.userSelect = "none";
+        });
+
+        window.addEventListener("mousemove", (event) => {
+            if (!dragging) {
+                return;
+            }
+            const rect = stack.getBoundingClientRect();
+            const offset = event.clientY - rect.top;
+            const percent = Math.max(22, Math.min((offset / rect.height) * 100, 72));
+            stack.style.setProperty("--editor-height", `${percent}%`);
+        });
+
+        window.addEventListener("mouseup", () => {
+            dragging = false;
+            document.body.style.userSelect = "";
+        });
+    }
+
+    function setupSidebarResizer() {
+        const divider = document.getElementById("sidebarDivider");
+        const workspace = document.querySelector(".workspace");
+        let dragging = false;
+
+        if (!divider || !workspace) {
+            return;
+        }
+
+        divider.addEventListener("mousedown", () => {
+            dragging = true;
+            document.body.style.userSelect = "none";
+        });
+
+        window.addEventListener("mousemove", (event) => {
+            if (!dragging || window.innerWidth <= 1080) {
+                return;
+            }
+            const rect = workspace.getBoundingClientRect();
+            const width = Math.max(220, Math.min(event.clientX - rect.left, 520));
+            workspace.style.setProperty("--sidebar-width", `${width}px`);
+        });
+
+        window.addEventListener("mouseup", () => {
+            dragging = false;
+            document.body.style.userSelect = "";
+        });
+    }
+        document.getElementById("goConfig").onclick = function () {
+        window.open("../../config", "_blank");
+    };
+    connectBtn.addEventListener("click", connectSource);
+    setupResizer();
+    setupSidebarResizer();
+    loadSources();
+</script>
+</body>
+</html>

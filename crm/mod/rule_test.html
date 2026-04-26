@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if selected_rule %}Rule Workbench{% else %}Rules Management{% endif %}</title>
+    <style>
+        body {
+            margin: 0;
+            background: #f4f4f4;
+            color: #222;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            padding: 20px;
+        }
+
+        .toolbar,
+        .workbench-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .toolbar {
+            margin-bottom: 20px;
+        }
+
+        button,
+        .link-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 34px;
+            padding: 8px 14px;
+            border: 0;
+            border-radius: 5px;
+            background: #287fa7;
+            color: #fff;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+        }
+
+        .new-rule-btn {
+            background: #28a745;
+        }
+
+        .danger-btn {
+            background: #b02a37;
+        }
+
+        .muted-btn {
+            background: #6c757d;
+        }
+
+        .rules-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .rule {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 16px;
+            align-items: center;
+            padding: 14px 15px;
+            border-radius: 8px;
+            background: #f9f9f9;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            cursor: default;
+            transition: background-color 0.2s;
+        }
+
+        .rule:hover {
+            background: #e9ecef;
+        }
+
+        .rule-info,
+        .rule-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px 18px;
+            min-width: 0;
+        }
+
+        .rule-info div,
+        .rule-meta div {
+            color: #333;
+            font-size: 14px;
+        }
+
+        .buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 4px;
+        }
+
+        .buttons a {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 5px;
+            color: #007bff;
+            font-size: 14px;
+            text-decoration: none;
+        }
+
+        .buttons a:hover {
+            background: #d1e7ff;
+        }
+
+        .task-badge {
+            display: inline-block;
+            min-width: 74px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: #e9ecef;
+            color: #495057;
+            font-size: 12px;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .task-badge.running {
+            background: #d1e7dd;
+            color: #0f5132;
+        }
+
+        .task-badge.paused {
+            background: #fff3cd;
+            color: #664d03;
+        }
+
+        .task-badge.stopping {
+            background: #cff4fc;
+            color: #055160;
+        }
+
+        .task-badge.finished {
+            background: #e2e3e5;
+            color: #41464b;
+        }
+
+        .task-badge.killed,
+        .task-badge.failed,
+        .task-badge.error {
+            background: #f8d7da;
+            color: #842029;
+        }
+
+        .workbench-header {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            padding: 16px 20px;
+            border-bottom: 1px solid #d7dce2;
+            background: #fff;
+            box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
+        }
+
+        .workbench-title {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 16px;
+            align-items: start;
+            margin-bottom: 12px;
+        }
+
+        .workbench-title h1 {
+            margin: 0 0 8px;
+            font-size: 22px;
+            line-height: 1.25;
+        }
+
+        .status-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 8px 16px;
+            margin-top: 12px;
+            color: #333;
+            font-size: 13px;
+        }
+
+        .status-panel strong {
+            display: block;
+            margin-bottom: 2px;
+            color: #6c757d;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        .workbench-main {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 320px;
+            gap: 16px;
+            padding: 16px 20px;
+        }
+
+        .workspace,
+        .debug-panel {
+            min-height: 480px;
+            border: 1px solid #dfe3e8;
+            border-radius: 8px;
+            background: #fff;
+        }
+
+        .workspace-head,
+        .debug-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 12px;
+            border-bottom: 1px solid #e8ebef;
+            color: #495057;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .log-panel {
+            box-sizing: border-box;
+            width: 100%;
+            height: calc(100vh - 300px);
+            min-height: 360px;
+            margin: 0;
+            padding: 12px;
+            overflow-y: auto;
+            background: #fbfcfd;
+            color: #1f2933;
+            white-space: pre-wrap;
+        }
+
+        .debug-body {
+            padding: 12px;
+            color: #333;
+            font-size: 13px;
+        }
+
+        .debug-body pre {
+            overflow: auto;
+            margin: 8px 0 0;
+            padding: 10px;
+            border-radius: 6px;
+            background: #f6f8fa;
+            white-space: pre-wrap;
+        }
+
+        .hint {
+            color: #6c757d;
+            font-size: 13px;
+        }
+
+        @media (max-width: 900px) {
+            .rule,
+            .workbench-title,
+            .workbench-main {
+                grid-template-columns: 1fr;
+            }
+
+            .buttons {
+                justify-content: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+{% if selected_rule %}
+    <header class="workbench-header">
+        <div class="workbench-title">
+            <div>
+                <h1>{{ selected_rule.rule_name }}</h1>
+                <div class="rule-meta">
+                    <div><strong>User ID:</strong> {{ selected_rule.user_id }}</div>
+                    <div><strong>Source:</strong> {{ selected_rule.src }} {{ selected_rule.src_host }} {{ selected_rule.src_schema }} {{ selected_rule.src_type }}</div>
+                    <div><strong>Target:</strong> {{ selected_rule.tgt }} {{ selected_rule.tgt_host }} {{ selected_rule.tgt_schema }} {{ selected_rule.tgt_type }}</div>
+                </div>
+            </div>
+            <span id="status-badge-{{ selected_rule.rule_id }}" class="task-badge">unknown</span>
+        </div>
+
+        <div class="workbench-actions">
+            <a class="link-button muted-btn" href="/rule/test/">Back</a>
+            <button onclick="executeScript('{{ selected_rule.rule_id }}')">Execute</button>
+            <button onclick="executeCompare('{{ selected_rule.rule_id }}')">Compare</button>
+            <button onclick="queryTaskStatus('{{ selected_rule.rule_id }}')">Status</button>
+            <button onclick="pauseTask('{{ selected_rule.rule_id }}')">Pause</button>
+            <button onclick="resumeTask('{{ selected_rule.rule_id }}')">Resume</button>
+            <button onclick="stopTask('{{ selected_rule.rule_id }}')">Stop</button>
+            <button class="danger-btn" onclick="killTask('{{ selected_rule.rule_id }}')">Kill</button>
+            <a class="link-button" href="/rule/detail/{{ selected_rule.rule_id }}/">Report</a>
+            <a class="link-button" href="/logs/" target="_blank">Log</a>
+        </div>
+
+        <div class="status-panel">
+            <div><strong>Task</strong><span id="task-type-{{ selected_rule.rule_id }}">-</span></div>
+            <div><strong>PID</strong><span id="task-pid-{{ selected_rule.rule_id }}">-</span></div>
+            <div><strong>Alive</strong><span id="task-alive-{{ selected_rule.rule_id }}">-</span></div>
+            <div><strong>Started</strong><span id="task-started-{{ selected_rule.rule_id }}">-</span></div>
+            <div><strong>Finished</strong><span id="task-finished-{{ selected_rule.rule_id }}">-</span></div>
+            <div><strong>Updated</strong><span id="task-updated-{{ selected_rule.rule_id }}">-</span></div>
+        </div>
+    </header>
+
+    <main class="workbench-main">
+        <section class="workspace">
+            <div class="workspace-head">
+                <span>Console</span>
+                <button class="muted-btn" onclick="clearLog('{{ selected_rule.rule_id }}')">Clear</button>
+            </div>
+            <pre id="log-{{ selected_rule.rule_id }}" class="log-panel"></pre>
+        </section>
+        <aside class="debug-panel">
+            <div class="debug-head">Debug Workspace</div>
+            <div class="debug-body">
+                <div class="hint">这里先保留为调试工作区，后面可以放状态 JSON、执行参数、单表重跑、case 文件筛选等能力。</div>
+                <pre id="task-json-{{ selected_rule.rule_id }}">No status loaded.</pre>
+            </div>
+        </aside>
+    </main>
+{% else %}
+    <div class="container">
+        <div class="toolbar">
+            <button class="new-rule-btn" onclick="createRule()">New Rule</button>
+            <button onclick="getConfig()">Show DataBase Source</button>
+            <button onclick="getDetail()">Report / Detail</button>
+            <button onclick="goHbase()">Select Hbase</button>
+            <button onclick="openLogs()">Log</button>
+        </div>
+
+        <div class="rules-list">
+            {% for rule_id, rule in rules.items %}
+            <div class="rule" ondblclick="openWorkbench('{{ rule.rule_id }}')">
+                <div class="rule-info">
+                    <div><strong>User ID:</strong> {{ rule.user_id }}</div>
+                    <div><strong>Rule Name:</strong> {{ rule.rule_name }}</div>
+                    <div><strong>Source:</strong> {{ rule.src }}</div>
+                    <div><strong>Target:</strong> {{ rule.tgt }}</div>
+                    <div><span id="status-badge-{{ rule.rule_id }}" class="task-badge">unknown</span></div>
+                </div>
+
+                <div class="buttons" onclick="event.stopPropagation()">
+                    <a href="javascript:void(0)" onclick="openWorkbench('{{ rule.rule_id }}')">Open</a>
+                    <a href="javascript:void(0)" onclick="editRule('{{ rule.rule_id }}')">Edit</a>
+                    <a href="javascript:void(0)" onclick="deleteRule('{{ rule.rule_id }}')">Delete</a>
+                    <a href="javascript:void(0)" onclick="executeScript('{{ rule.rule_id }}')">Execute</a>
+                    <a href="javascript:void(0)" onclick="executeCompare('{{ rule.rule_id }}')">Compare</a>
+                    <a href="javascript:void(0)" onclick="queryTaskStatus('{{ rule.rule_id }}')">Status</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+{% endif %}
+
+    <script>
+        const SELECTED_RULE_ID = "{{ selected_rule_id|default:'' }}";
+        const LOG_MAX_LINES = 500;
+        const LOG_BUFFERS = new Map();
+        const LOG_TRUNCATED = new Set();
+
+        function createRule() {
+            window.location.href = "/rule/create_rule/";
+        }
+
+        function getConfig() {
+            window.location.href = "/config/";
+        }
+
+        function getDetail() {
+            window.location.href = "/rule/detail/0/";
+        }
+
+        function goHbase() {
+            window.location.href = "/select/hbase";
+        }
+
+        function openLogs() {
+            window.open("/logs/", "_blank");
+        }
+
+        function editRule(ruleId) {
+            window.location.href = `/rule/ch_rule/${ruleId}/`;
+        }
+
+        function openWorkbench(ruleId) {
+            window.open(`/rule/test/${ruleId}/`, "_blank");
+        }
+
+        function getCsrfToken() {
+            return "{{ csrf_token }}";
+        }
+
+        function setText(id, value) {
+            const node = document.getElementById(id);
+            if (node) {
+                node.textContent = value || "-";
+            }
+        }
+
+        function formatTime(seconds) {
+            if (!seconds) {
+                return "-";
+            }
+            return new Date(seconds * 1000).toLocaleString();
+        }
+
+        function getLogBuffer(ruleId) {
+            if (!LOG_BUFFERS.has(ruleId)) {
+                LOG_BUFFERS.set(ruleId, []);
+            }
+            return LOG_BUFFERS.get(ruleId);
+        }
+
+        function processMessage(ruleId, message) {
+            const logDiv = document.getElementById(`log-${ruleId}`);
+            if (!logDiv) {
+                return;
+            }
+            const currentTime = new Date().toLocaleTimeString();
+            const buffer = getLogBuffer(ruleId);
+            const lines = `[${currentTime}] ${message}`.split(/\r?\n/);
+            if (lines.length && lines[lines.length - 1] === "") {
+                lines.pop();
+            }
+            buffer.push(...lines);
+            if (buffer.length > LOG_MAX_LINES) {
+                buffer.splice(0, buffer.length - LOG_MAX_LINES);
+                LOG_TRUNCATED.add(ruleId);
+            }
+            const displayLines = LOG_TRUNCATED.has(ruleId)
+                ? [`[console truncated, showing latest ${LOG_MAX_LINES} lines]`, ...buffer]
+                : buffer;
+            logDiv.textContent = `${displayLines.join("\n")}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog(ruleId) {
+            const logDiv = document.getElementById(`log-${ruleId}`);
+            if (logDiv) {
+                logDiv.textContent = "";
+            }
+            LOG_BUFFERS.set(ruleId, []);
+            LOG_TRUNCATED.delete(ruleId);
+        }
+
+        function renderTaskStatus(ruleId, payload) {
+            const task = payload && payload.task ? payload.task : {};
+            const status = task.status || (payload && payload.status === "error" ? "error" : "unknown");
+            const badge = document.getElementById(`status-badge-${ruleId}`);
+            if (badge) {
+                badge.textContent = status;
+                badge.className = `task-badge ${status}`;
+            }
+            setText(`task-type-${ruleId}`, task.task_type);
+            setText(`task-pid-${ruleId}`, task.pid);
+            setText(`task-alive-${ruleId}`, task.is_alive === undefined ? "-" : String(task.is_alive));
+            setText(`task-started-${ruleId}`, formatTime(task.started_at));
+            setText(`task-finished-${ruleId}`, formatTime(task.finished_at));
+            setText(`task-updated-${ruleId}`, new Date().toLocaleString());
+            const jsonNode = document.getElementById(`task-json-${ruleId}`);
+            if (jsonNode) {
+                jsonNode.textContent = JSON.stringify(payload, null, 2);
+            }
+        }
+
+        function formatTaskMessage(payload) {
+            if (!payload) {
+                return "No task payload returned.";
+            }
+            const task = payload.task || {};
+            const parts = [];
+            if (payload.message) {
+                parts.push(payload.message);
+            }
+            if (task.task_type) {
+                parts.push(`type=${task.task_type}`);
+            }
+            if (task.status) {
+                parts.push(`status=${task.status}`);
+            }
+            if (task.pid) {
+                parts.push(`pid=${task.pid}`);
+            }
+            return parts.join(" | ") || payload.status || "Task status updated.";
+        }
+
+        async function callTaskApi(url, method = "POST") {
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    "X-CSRFToken": getCsrfToken(),
+                    "X-Requested-With": "XMLHttpRequest",
+                    "Accept": "application/json"
+                }
+            });
+            const payload = await response.json();
+            if (!response.ok || payload.status === "error" || payload.error) {
+                const error = new Error(payload.message || payload.error || "Request failed.");
+                error.payload = payload;
+                error.httpStatus = response.status;
+                throw error;
+            }
+            return payload;
+        }
+
+        async function runTaskAction(ruleId, url, method, actionName) {
+            try {
+                const payload = await callTaskApi(url, method);
+                renderTaskStatus(ruleId, payload);
+                processMessage(ruleId, `${actionName}: ${formatTaskMessage(payload)}`);
+                return payload;
+            } catch (err) {
+                if (err.payload) {
+                    renderTaskStatus(ruleId, err.payload);
+                }
+                processMessage(ruleId, `${actionName} failed: ${err.message}`);
+                return null;
+            }
+        }
+
+        function deleteRule(ruleId) {
+            if (!confirm("Are you sure you want to delete this rule?")) {
+                return;
+            }
+            fetch(`/rule/del_rule/${ruleId}/`, {
+                method: "POST",
+                headers: { "X-CSRFToken": getCsrfToken() }
+            }).then(response => {
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    alert("Failed to delete rule.");
+                }
+            });
+        }
+
+        function executeScript(ruleId) {
+            runTaskAction(ruleId, `/rule/exec/${ruleId}/`, "POST", "Execute");
+        }
+
+        function executeCompare(ruleId) {
+            runTaskAction(ruleId, `/rule/comp/${ruleId}/`, "POST", "Compare");
+        }
+
+        function stopTask(ruleId) {
+            runTaskAction(ruleId, `/rule/shut/${ruleId}/`, "POST", "Stop");
+        }
+
+        function pauseTask(ruleId) {
+            runTaskAction(ruleId, `/rule/pause/${ruleId}/`, "POST", "Pause");
+        }
+
+        function resumeTask(ruleId) {
+            runTaskAction(ruleId, `/rule/resume/${ruleId}/`, "POST", "Resume");
+        }
+
+        function killTask(ruleId) {
+            runTaskAction(ruleId, `/rule/kill/${ruleId}/`, "POST", "Kill");
+        }
+
+        async function queryTaskStatus(ruleId) {
+            const payload = await runTaskAction(ruleId, `/rule/status/${ruleId}/`, "GET", "Status");
+            if (!payload) {
+                renderTaskStatus(ruleId, { status: "error" });
+            }
+        }
+
+        function connectWebSocket() {
+            const scheme = window.location.protocol === "https:" ? "wss" : "ws";
+            const socket = new WebSocket(`${scheme}://${window.location.host}/ws/message/`);
+            socket.onmessage = function (event) {
+                const data = JSON.parse(event.data);
+                processMessage(data.rule_id, data.message);
+            };
+            socket.onclose = function () {
+                console.warn("WebSocket closed.");
+            };
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            connectWebSocket();
+            if (SELECTED_RULE_ID) {
+                queryTaskStatus(SELECTED_RULE_ID);
+            }
+        });
+    </script>
+</body>
+</html>

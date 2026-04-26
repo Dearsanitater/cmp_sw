@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>Display JSON Data</title>
+    <style>
+        .container {
+            display: flex;
+            justify-content: space-between;
+        }
+        .column {
+            width: 45%; /* 每列宽度为45% */
+            padding: 10px;
+            border: 1px solid #ccc;
+            margin: 5px;
+            overflow: auto; /* 如果内容溢出，添加滚动条 */
+        }
+    </style>
+</head>
+<body>
+    <h1>错误数据</h1>
+        <div> {{ data|safe }}</div>
+    <h1>数据输出</h1>
+    <div class="container">
+        <div class="column" id="column1">
+            <h2>约束对比</h2>
+            <pre id="data1"></pre> <!-- 显示第一个 JSON 数据 -->
+        </div>
+        <div class="column" id="column2">
+            <h2>内容对比报告</h2>
+            <pre id="data2"></pre> <!-- 显示第二个 JSON 数据 -->
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+            function formatNestedList(data) {
+            // 检查数据类型
+            if (Array.isArray(data)) {
+                // 如果是数组，递归处理
+                return data.map(formatNestedList).join(', '); // 用逗号连接每个元素
+            } else if (typeof data === 'object' && data !== null) {
+                // 如果是对象，处理每个键
+                return Object.entries(data).map(([key, value]) => {
+                    return `${key}: ${formatNestedList(value)}`;
+                }).join(', ');
+            }
+            return data; // 返回基础数据
+        }
+        $(document).ready(function() {
+
+            $.ajax({
+                url: '../get/data',  // 替换为你的视图 URL
+                method: 'GET',
+                success: function(data) {
+                    // 假设 data 是一个字典，包含两个 JSON 字符串
+                    $('#data1').text(formatNestedList(data['cons约束对比']));
+                    $('#data2').text(JSON.stringify(data['report内容对比报告'], null, 2));
+                },
+                error: function(error) {
+                    console.log(error);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

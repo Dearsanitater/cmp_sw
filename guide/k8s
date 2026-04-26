@@ -35,6 +35,69 @@ docker-compose.yml
 worker 用 status/lease_until claim
 
 --redis调度
-所有 pod -> 同一个 Redis Stream/List
-worker 消费任务
-MySQL 仍存最终状态
+    所有 pod -> 同一个 Redis Stream/List
+    worker 消费任务
+    MySQL 仍存最终状态
+    Django 创建 job:
+      MySQL insert compare_job
+      MySQL insert compare_table_task
+      Redis XADD compare:jobs job_id
+
+    worker 抢任务:
+      Redis XREADGROUP / BRPOP 拿 task_id
+      MySQL update task status running
+
+    worker 完成:
+      MySQL update task success/failed
+      MySQL update job counters
+
+mysql-一级二级任务表，以及表为权威状态表，可能考虑永久保留
+    CREATE TABLE `compare_job` (
+  `job_id` varchar(64) NOT NULL,
+  `src_key` varchar(128) NOT NULL,
+  `tgt_key` varchar(128) NOT NULL,
+  `compare_schema` tinyint(1) NOT NULL DEFAULT '1',
+  `compare_data` tinyint(1) NOT NULL DEFAULT '1',
+  `status` varchar(32) NOT NULL DEFAULT 'planning',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP, #时间暂不支持
+  `started_at` datetime DEFAULT NULL,   #时间暂不支持
+  `finished_at` datetime DEFAULT NULL,  #时间暂不支持
+  `error_message` text,
+  `max_pods` int(11) NOT NULL DEFAULT '1',#每个job最大pod避免吃满资源
+  `command` varchar(32) DEFAULT NULL, #界面控制先存这
+  `command_version` bigint(20) NOT NULL DEFAULT '0',#用cmd_version控制装填，弃用ipc
+  `total_tasks` int(11) NOT NULL DEFAULT '0', #planner回填分发后某个jobid的总任务数（表数）
+  `success_tasks` int(11) NOT NULL DEFAULT '0',#处理进度相关
+  `failed_tasks` int(11) NOT NULL DEFAULT '0',#处理进度相关
+  `running_tasks` int(11) NOT NULL DEFAULT '0',#进度相关
+  `pending_tasks` int(11) NOT NULL DEFAULT '0',#进度相关
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`job_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- autotest.compare_table_task definition
+
+CREATE TABLE `compare_table_task` (
+  `task_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `job_id` varchar(64) NOT NULL,
+  `table_name` varchar(512) NOT NULL,
+  `status` varchar(32) NOT NULL DEFAULT 'pending',
+  `worker_id` varchar(128) DEFAULT NULL,
+  `claim_token` varchar(64) DEFAULT NULL,##防止超时写回
+  `retry_count` int(11) NOT NULL DEFAULT '0',
+  `started_at` datetime DEFAULT NULL,#优先级不高，不支持
+  `finished_at` datetime DEFAULT NULL,#优先级不高，不支持
+  `heartbeat_at` datetime DEFAULT NULL,#优先级不高，不支持
+  `error_message` text,
+  `lease_until` datetime DEFAULT NULL,#超时抢占恢复
+  `claimed_at` datetime DEFAULT NULL,
+  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`task_id`),
+  UNIQUE KEY `uk_job_table` (`job_id`,`table_name`),
+  KEY `idx_task_claim` (`job_id`,`status`,`task_id`),
+  KEY `idx_task_worker` (`worker_id`,`status`),
+  KEY `idx_task_heartbeat` (`status`,`heartbeat_at`),
+  KEY `idx_task_token` (`claim_token`),
+  KEY `idx_job_status_lease` (`job_id`,`status`,`lease_until`,`task_id`),
+  CONSTRAINT `fk_compare_table_task_job` FOREIGN KEY (`job_id`) REFERENCES `compare_job` (`job_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

@@ -318,7 +318,7 @@ class SqlServerConnector(BaseConnector):
             if not rows:
                 break
             yield rows
-
+#yield流式获取get_row结果
     def scan_rows(self, table, columns_meta, batch_size=1000, schema=None, order_by=None):
         yield from self.get_row(
             table,

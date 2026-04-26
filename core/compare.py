@@ -140,43 +140,35 @@ class ergodic_database():
             connector.close()
         except Exception:
             pass
-
-    def _table_connector(self, role):
-        if role == 'src':
-            return self.table_src_connector
-        return self.table_tgt_connector
-
-    def _set_table_connector(self, role, connector):
-        if role == 'src':
-            self.table_src_connector = connector
-        else:
-            self.table_tgt_connector = connector
-
+#单独拿拿去表连接，方便并发结构
     def _acquire_table_compare_connectors(self):
         acquired = {'src': False, 'tgt': False}
-        if self._table_connector('src') is None:
-            self._set_table_connector('src', self._acquire_compare_connector('src'))
+        if self.table_src_connector is None:
+            self.table_src_connector = self._acquire_compare_connector('src')
             acquired['src'] = True
-        if self._table_connector('tgt') is None:
-            self._set_table_connector('tgt', self._acquire_compare_connector('tgt'))
+        if self.table_tgt_connector is None:
+            self.table_tgt_connector = self._acquire_compare_connector('tgt')
             acquired['tgt'] = True
         return acquired
-
+#放回
     def _release_table_compare_connectors(self, acquired, broken_roles=None):
         broken_roles = broken_roles or set()
         for role in ('src', 'tgt'):
             if not acquired.get(role):
                 continue
-            connector = self._table_connector(role)
-            self._set_table_connector(role, None)
+            if role == 'src':
+                connector = self.table_src_connector
+                self.table_src_connector = None
+            else:
+                connector = self.table_tgt_connector
+                self.table_tgt_connector = None
             self._release_compare_connector(role, connector, broken=role in broken_roles)
 
     def _normalize_table_snapshot(self, index, table_name, columns):
         if isinstance(columns, dict):
-            columns['tab_num'] = index
+            columns['tab_num'] = index#架构更改后tab好靠外部计数，后续考虑删掉
             columns['tab_name'] = table_name
             return columns
-
         tab_col = []
         for column in columns:
             tab_col.append({
@@ -193,7 +185,7 @@ class ergodic_database():
         return {'tab_num': index, 'tab_name': table_name, 'tab_col': tab_col}
 
     def _load_table_columns(self, table_name, role):
-        connector = self._table_connector(role)
+        connector = self.table_src_connector if role == 'src' else self.table_tgt_connector
         owns_connector = connector is None
         if owns_connector:
             connector = self._acquire_compare_connector(role)
@@ -208,7 +200,7 @@ class ergodic_database():
         finally:
             if owns_connector:
                 self._release_compare_connector(role, connector, broken=broken)
-
+#并发获取源备字段属性
     def _load_table_columns_pair(self, table_name, src_columns, tgt_columns):
         if src_columns and tgt_columns:
             return src_columns, tgt_columns
@@ -349,32 +341,6 @@ class ergodic_database():
     def _is_thread_safe_session(session):
         return bool(getattr(session, 'is_thread_local_proxy', False))
 
-    def _run_cons_analysis(self, table_name, col_num, role):
-        connector_types = {'sqlserver', 'mysql', 'tdsql', 'tidb'}
-        if self._uses_connector_backend() and (self.conf_src in connector_types or self.conf_tgt in connector_types):
-            return self.cons_analysis(table_name, col_num, role)
-        if role == 'src':
-            if self._is_thread_safe_session(self.conn_src):
-                return self.cons_analysis(table_name, col_num, role)
-            with self._conn_src_lock:
-                return self.cons_analysis(table_name, col_num, role)
-        if role == 'tgt' and self.conf_tgt not in ('elastic', 'hdfs'):
-            if self._is_thread_safe_session(self.conn_tgt):
-                return self.cons_analysis(table_name, col_num, role)
-            with self._conn_tgt_lock:
-                return self.cons_analysis(table_name, col_num, role)
-        return self.cons_analysis(table_name, col_num, role)
-
-    def _run_row_contain(self, tbname, tbcol, tgcol, order_col, ora_search_column=None):
-        connector_types = {'sqlserver', 'mysql', 'tdsql', 'tidb'}
-        if self._uses_connector_backend() and self.conf_src in connector_types and self.conf_tgt in connector_types:
-            return self.row_contain(None, None, tbname, tbcol, tgcol, order_col, ora_search_column)
-        with ExitStack() as stack:
-            if self.conn_src is not None and not self._is_thread_safe_session(self.conn_src):
-                stack.enter_context(self._conn_src_lock)
-            if self.conn_tgt is not None and self.conf_tgt not in ('elastic', 'hdfs', 'hbase') and not self._is_thread_safe_session(self.conn_tgt):
-                stack.enter_context(self._conn_tgt_lock)
-            return self.row_contain(self.conn_src, self.conn_tgt, tbname, tbcol, tgcol, order_col, ora_search_column)
     def dm_tab(self,source):
         i=j=k=0
         ora1 = opg.MysqlConn(f'{source}')
@@ -611,8 +577,7 @@ class ergodic_database():
         yes_info='\033[0;32m YES! \033[0m \t %s列源备映射正确，源端为%s %s位\t期望更改为%s\t实际备端为%s %s位' % (srcd['col_name'], srcd['type'], srcd['len'],tgt_col_temp, tgtd['type'],tgtd['len'])
         no_cord = ' NO!  \t %s列源备映射错误，源端为%s %s位\t期望更改为%s\t实际备端为%s %s位' % (srcd['col_name'], srcd['type'], srcd['len'], tgt_col_temp, tgtd['type'], tgtd['len'])
         yes_cord = 'YES! \t %s列源备映射正确，源端为%s %s位\t期望更改为%s\t实际备端为%s %s位' % (srcd['col_name'], srcd['type'], srcd['len'], tgt_col_temp, tgtd['type'], tgtd['len'])
-        p1=re.sub(r"\(.*?\)", '', tgtd['type']).replace(' ','').upper()
-        p2=re.sub(r"\(.*?\)", '', tgt_col_temp).replace(' ','').upper()
+
         if re.sub(r"\(.*?\)", '', tgtd['type']).replace(' ','').upper() == re.sub(r"\(.*?\)", '', tgt_col_temp).replace(' ','').upper():
             #print('%s列源备映射正确，源：%s 备%s' % (srcd['col_name'], srcd['type'], tgtd['type']))
             if re.search(r"\((.*?)\)", tgt_col_temp):
@@ -785,7 +750,7 @@ class ergodic_database():
             db_type = self.conf_src if n == 'src' else self.conf_tgt
             if db_type in connector_types:
                 role = 'src' if n == 'src' else 'tgt'
-                connector = self._table_connector(role)
+                connector = self.table_src_connector if role == 'src' else self.table_tgt_connector
                 owns_connector = connector is None
                 if owns_connector:
                     connector = self._acquire_compare_connector(role)
@@ -1460,8 +1425,8 @@ class ergodic_database():
     def row_contain(self,src,tgt,tbname,tbcol,tgcol,order_col,ora_search_column=None):#行数、内容比较
         connector_types = {'sqlserver', 'mysql', 'tdsql', 'tidb'}
         if self._uses_connector_backend() and self.conf_src in connector_types and self.conf_tgt in connector_types:
-            src_connector = self._table_connector('src')
-            tgt_connector = self._table_connector('tgt')
+            src_connector = self.table_src_connector
+            tgt_connector = self.table_tgt_connector
             own_src = src_connector is None
             own_tgt = tgt_connector is None
             if own_src:
@@ -2005,7 +1970,7 @@ class ergodic_database():
                     table_log.append('！备端查无该表 %s'%y['tab_name'])
                     self.bfe_last.append(table_log)
             return tmp_tb_list
-
+##分发前计时，
         tasklist_start = stime.monotonic()
         tasklist=pre_compare(src,tgt)
         tasklist_cost_ms = (stime.monotonic() - tasklist_start) * 1000
@@ -2041,7 +2006,6 @@ class ergodic_database():
         compare_loop_cost_ms = (stime.monotonic() - compare_loop_start) * 1000
         compare_total_cost_ms = (stime.monotonic() - compare_total_start) * 1000
         print(f'[phase] schema={schema_cost_ms:.2f}ms tasklist={tasklist_cost_ms:.2f}ms compare_loop={compare_loop_cost_ms:.2f}ms total={compare_total_cost_ms:.2f}ms')
-        # self.xlsx(self.bfe_last)
         #print(self.bfe_last)
         #打表
         report=json.dumps(self.bfe_last,ensure_ascii=False)
@@ -2055,134 +2019,6 @@ class ergodic_database():
         with open('resource/test_report/err.txt','w+',encoding='utf-8') as f:
             f.write(str(self.cons_err))
     def cons_data_compare(self,tab_name,a,tab_col,if_cpdata=0):
-            start=stime.monotonic()
-            self._reset_compare_context(tab_name)
-            table_col_result = None
-            table_cons_err = None
-            if self._check_control(f'表 {tab_name}'):
-                return {
-                    'messages': list(self.bfe),
-                    'col_result': table_col_result,
-                'cons_err': table_cons_err,
-            }
-            print(f'表 {tab_name} 开始比对')
-            if self._uses_connector_backend():
-                if not tab_col:
-                    tab_col = self._load_table_columns(tab_name, 'src')
-                if not a:
-                    a = self._load_table_columns(tab_name, 'tgt')
-            if len(a) == len(tab_col) or (self.tgt_db_t=='hbase' and len(a)<len(tab_col)):
-                print('\033[0;34m %s \033[0m源备字段数相同，源端字段：%d \t备端字段%d'%(tab_name,len(tab_col),len(a)))
-                self.bfe.append('\033[0;34m %s \033[0m源备字段数相同，源端字段：%d \t备端字段%d'%(tab_name,len(tab_col),len(a)))
-                ora_search_column = self.col_compair(tab_col,a)#比对字段属性
-                if self._check_control(f'表 {tab_name}'):
-                    return {
-                        'messages': list(self.bfe),
-                        'col_result': table_col_result,
-                        'cons_err': table_cons_err,
-                    }
-                if self.tgt_db_t != 'hbase':
-                    tgt_cons = self._run_cons_analysis(tab_name, len(a), 'tgt')
-                    src_cons = self._run_cons_analysis(tab_name, len(a), 'src')
-                    order_col, table_col_result = self.cons_compare(tgt_cons, src_cons)
-                else:#hbase表字段数可能不一致，暂不考虑字段顺序问题，直接按源端字段顺序比对内容
-                    src_cons = self._run_cons_analysis(tab_name, len(a), 'src')
-                    order_col, table_col_result = self.cons_compare(src_cons, src_cons)
-                if if_cpdata==1:
-                    if self._check_control(f'表 {tab_name}'):
-                        return {
-                            'messages': list(self.bfe),
-                            'col_result': table_col_result,
-                            'cons_err': table_cons_err,
-                        }
-                    table_cons_err = self._run_row_contain(tab_name,tab_col,a,order_col,ora_search_column)
-            elif self.src_db_t=='hbase':
-                pass
-            else:
-                print('\033[0;34m ！ \033[0m%s\t源备字段数不同，源端字段：%d \t备端字段%d'%(tab_name,len(tab_col),len(a)))
-                self.bfe.append('！ %s\t源备字段数不同，源端字段：%d \t备端字段%d'%(tab_name,len(tab_col),len(a)))
-            print('表 %s 比对完成，耗时%.2f毫秒'%(tab_name, (stime.monotonic()-start)*1000))
-            return {
-                'messages': list(self.bfe),
-                'col_result': table_col_result,
-                'cons_err': table_cons_err,
-            }
-
-    def cons_data_compare(self,tab_name,a,tab_col,if_cpdata=0):
-            start=stime.monotonic()
-            self._reset_compare_context(tab_name)
-            table_col_result = None
-            table_cons_err = None
-            acquired = {'src': False, 'tgt': False}
-            broken_roles = set()
-            columns_cost_ms = 0.0
-            constraints_cost_ms = 0.0
-            rows_cost_ms = 0.0
-            try:
-                if self._uses_connector_backend():
-                    acquired = self._acquire_table_compare_connectors()
-                if self._check_control(f'表 {tab_name}'):
-                    return {
-                        'messages': list(self.bfe),
-                        'col_result': table_col_result,
-                        'cons_err': table_cons_err,
-                    }
-                print(f'表 {tab_name} 开始比对')
-                if self._uses_connector_backend():
-                    columns_start = stime.monotonic()
-                    if not tab_col:
-                        tab_col = self._load_table_columns(tab_name, 'src')
-                    if not a:
-                        a = self._load_table_columns(tab_name, 'tgt')
-                    columns_cost_ms = (stime.monotonic() - columns_start) * 1000
-                if len(a) == len(tab_col) or (self.tgt_db_t=='hbase' and len(a)<len(tab_col)):
-                    print('\033[0;34m %s \033[0m源备字段数相同，源端字段：%d \t备端字段%d'%(tab_name,len(tab_col),len(a)))
-                    self.bfe.append('\033[0;34m %s \033[0m源备字段数相同，源端字段：%d \t备端字段%d'%(tab_name,len(tab_col),len(a)))
-                    ora_search_column = self.col_compair(tab_col,a)
-                    if self._check_control(f'表 {tab_name}'):
-                        return {
-                            'messages': list(self.bfe),
-                            'col_result': table_col_result,
-                            'cons_err': table_cons_err,
-                        }
-                    constraints_start = stime.monotonic()
-                    if self.tgt_db_t != 'hbase':
-                        tgt_cons = self._run_cons_analysis(tab_name, len(a), 'tgt')
-                        src_cons = self._run_cons_analysis(tab_name, len(a), 'src')
-                        order_col, table_col_result = self.cons_compare(tgt_cons, src_cons)
-                    else:
-                        src_cons = self._run_cons_analysis(tab_name, len(a), 'src')
-                        order_col, table_col_result = self.cons_compare(src_cons, src_cons)
-                    constraints_cost_ms = (stime.monotonic() - constraints_start) * 1000
-                    if if_cpdata==1:
-                        if self._check_control(f'表 {tab_name}'):
-                            return {
-                                'messages': list(self.bfe),
-                                'col_result': table_col_result,
-                                'cons_err': table_cons_err,
-                            }
-                        rows_start = stime.monotonic()
-                        table_cons_err = self._run_row_contain(tab_name,tab_col,a,order_col,ora_search_column)
-                        rows_cost_ms = (stime.monotonic() - rows_start) * 1000
-                elif self.src_db_t=='hbase':
-                    pass
-                else:
-                    print('\033[0;34m ！\033[0m%s\t源备字段数不同，源端字段：%d \t备端字段%d'%(tab_name,len(tab_col),len(a)))
-                    self.bfe.append('！%s\t源备字段数不同，源端字段：%d \t备端字段%d'%(tab_name,len(tab_col),len(a)))
-                print('表 %s 比对完成，耗时%.2f毫秒'%(tab_name, (stime.monotonic()-start)*1000))
-                return {
-                    'messages': list(self.bfe),
-                    'col_result': table_col_result,
-                    'cons_err': table_cons_err,
-                }
-            except Exception:
-                broken_roles = {role for role, flag in acquired.items() if flag}
-                raise
-            finally:
-                if self._uses_connector_backend():
-                    self._release_table_compare_connectors(acquired, broken_roles)
-
-    def cons_data_compare(self,tab_name,a,tab_col,if_cpdata=0):
             start = stime.monotonic()
             self._reset_compare_context(tab_name)
             table_col_result = None
@@ -2192,6 +2028,7 @@ class ergodic_database():
             columns_cost_ms = 0.0
             constraints_cost_ms = 0.0
             rows_cost_ms = 0.0
+            connector_types = {'sqlserver', 'mysql', 'tdsql', 'tidb'}
             try:
                 if self._check_control(f'表 {tab_name}'):
                     return {
@@ -2202,6 +2039,7 @@ class ergodic_database():
                 print(f'表 {tab_name} 开始比对')
                 if self._uses_connector_backend():
                     columns_start = stime.monotonic()
+                    #并发获取tab_col
                     tab_col, a = self._load_table_columns_pair(tab_name, tab_col, a)
                     columns_cost_ms = (stime.monotonic() - columns_start) * 1000
                     acquired = self._acquire_table_compare_connectors()
@@ -2217,11 +2055,29 @@ class ergodic_database():
                         }
                     constraints_start = stime.monotonic()
                     if self.tgt_db_t != 'hbase':
-                        tgt_cons = self._run_cons_analysis(tab_name, len(a), 'tgt')
-                        src_cons = self._run_cons_analysis(tab_name, len(a), 'src')
+                        if self._uses_connector_backend() and (self.conf_src in connector_types or self.conf_tgt in connector_types):
+                            tgt_cons = self.cons_analysis(tab_name, len(a), 'tgt')
+                            src_cons = self.cons_analysis(tab_name, len(a), 'src')
+                        else:
+                            if self.conf_tgt not in ('elastic', 'hdfs') and self.conn_tgt is not None and not self._is_thread_safe_session(self.conn_tgt):
+                                with self._conn_tgt_lock:
+                                    tgt_cons = self.cons_analysis(tab_name, len(a), 'tgt')
+                            else:
+                                tgt_cons = self.cons_analysis(tab_name, len(a), 'tgt')
+                            if self.conn_src is not None and not self._is_thread_safe_session(self.conn_src):
+                                with self._conn_src_lock:
+                                    src_cons = self.cons_analysis(tab_name, len(a), 'src')
+                            else:
+                                src_cons = self.cons_analysis(tab_name, len(a), 'src')
                         order_col, table_col_result = self.cons_compare(tgt_cons, src_cons)
                     else:
-                        src_cons = self._run_cons_analysis(tab_name, len(a), 'src')
+                        if self._uses_connector_backend() and (self.conf_src in connector_types or self.conf_tgt in connector_types):
+                            src_cons = self.cons_analysis(tab_name, len(a), 'src')
+                        elif self.conn_src is not None and not self._is_thread_safe_session(self.conn_src):
+                            with self._conn_src_lock:
+                                src_cons = self.cons_analysis(tab_name, len(a), 'src')
+                        else:
+                            src_cons = self.cons_analysis(tab_name, len(a), 'src')
                         order_col, table_col_result = self.cons_compare(src_cons, src_cons)
                     constraints_cost_ms = (stime.monotonic() - constraints_start) * 1000
                     if if_cpdata == 1:
@@ -2234,7 +2090,15 @@ class ergodic_database():
                         if self._uses_connector_backend() and not any(acquired.values()):
                             acquired = self._acquire_table_compare_connectors()
                         rows_start = stime.monotonic()
-                        table_cons_err = self._run_row_contain(tab_name, tab_col, a, order_col, ora_search_column)
+                        if self._uses_connector_backend() and self.conf_src in connector_types and self.conf_tgt in connector_types:
+                            table_cons_err = self.row_contain(None, None, tab_name, tab_col, a, order_col, ora_search_column)
+                        else:
+                            with ExitStack() as stack:
+                                if self.conn_src is not None and not self._is_thread_safe_session(self.conn_src):
+                                    stack.enter_context(self._conn_src_lock)
+                                if self.conn_tgt is not None and self.conf_tgt not in ('elastic', 'hdfs', 'hbase') and not self._is_thread_safe_session(self.conn_tgt):
+                                    stack.enter_context(self._conn_tgt_lock)
+                                table_cons_err = self.row_contain(self.conn_src, self.conn_tgt, tab_name, tab_col, a, order_col, ora_search_column)
                         rows_cost_ms = (stime.monotonic() - rows_start) * 1000
                 elif self.src_db_t == 'hbase':
                     pass
@@ -2256,7 +2120,7 @@ class ergodic_database():
                     self._release_table_compare_connectors(acquired, broken_roles)
 if __name__ == '__main__':#refact
     src = 'mssql##';tgt = 'hyperbase184';err_handling = 3;if_cpdata=1#9.0常用 mysql##/oracle/mssql##
-    import opg_refactor as opgr
+    
     import compare_refactor as cr
     p=cr.ergodic_database()
     #p=ergodic_database()

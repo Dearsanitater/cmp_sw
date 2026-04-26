@@ -39,7 +39,7 @@ VARIANT_TEMPORAL_KIND = {
     "datetime": "datetime",
     "datetimeoffset": "datetimeoffset",
 }
-
+#variant特殊适配，按照字典路径比对
 VARIANT_TEMPORAL_FORMATS = {
     "date": {
         "day": {

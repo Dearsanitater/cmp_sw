@@ -1,7 +1,9 @@
 resource/test_report/cons.txt
 resource/test_report/report.txt
-resource/test_report/cons.txt
+
 *.pyc
 resource/test_report/report.xlsx
 .codex_daphne_8001.err.log
 .*.log
+/.vscode/
+.codex_daphne_8001.log

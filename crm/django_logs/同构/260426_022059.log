@@ -1,0 +1,254 @@
+进程号19292,更改输出流完毕
+mssql## mssql##
+sqlserver 172.20.72.117 链接耗时:362.591毫秒
+sqlserver 172.20.72.117 链接耗时:370.034毫秒
+sqlserver 172.20.72.117 链接耗时:158.720毫秒
+sqlserver 172.20.72.117 链接耗时:160.020毫秒
+sqlserver 172.20.72.117 链接耗时:160.727毫秒
+sqlserver 172.20.72.117 链接耗时:160.682毫秒
+sqlserver 172.20.72.117 链接耗时:161.962毫秒
+sqlserver 172.20.72.117 链接耗时:164.890毫秒
+sqlserver 172.20.72.117 链接耗时:166.720毫秒
+sqlserver 172.20.72.117 链接耗时:166.601毫秒
+源端共计 10个表，备端共计 10个表
+表 test1 开始比对
+[0;34m test1 [0m源备字段数相同，源端字段：10 	备端字段10
+[0;32m YES! [0m 	 no列源备映射正确，源端为int None位	期望更改为int	实际备端为int None位
+[0;32m YES! [0m 	 c_char列源备映射正确，源端为char 5位	期望更改为char(n)	实际备端为char 5位
+[0;32m YES! [0m 	 c_nchar列源备映射正确，源端为nchar 20位	期望更改为nchar(n)	实际备端为nchar 20位
+[0;32m YES! [0m 	 c_varchar列源备映射正确，源端为varchar 20位	期望更改为varchar(n)	实际备端为varchar 20位
+[0;32m YES! [0m 	 c_nvarchar列源备映射正确，源端为nvarchar 60位	期望更改为nvarchar(n)	实际备端为nvarchar 60位
+[0;32m YES! [0m 	 c_decimal列源备映射正确，源端为decimal None位	期望更改为decimal(p,s)	实际备端为decimal None位
+[0;32m YES! [0m 	 c_datetime列源备映射正确，源端为datetime None位	期望更改为datetime	实际备端为datetime None位
+[0;32m YES! [0m 	 c_numeric列源备映射正确，源端为numeric None位	期望更改为numeric(p,s)	实际备端为numeric None位
+[0;32m YES! [0m 	 c_var400列源备映射正确，源端为varchar 200位	期望更改为varchar(n)	实际备端为varchar 200位
+[0;32m YES! [0m 	 c_char1列源备映射正确，源端为char 1位	期望更改为char(n)	实际备端为char 1位
+当前线程： ThreadPoolExecutor-7_0 正在获取： test1 端内容
+表 test2 开始比对
+[0;34m test2 [0m源备字段数相同，源端字段：10 	备端字段10
+[0;32m YES! [0m 	 no列源备映射正确，源端为int None位	期望更改为int	实际备端为int None位
+[0;32m YES! [0m 	 c_char列源备映射正确，源端为char 5位	期望更改为char(n)	实际备端为char 5位
+[0;32m YES! [0m 	 c_nchar列源备映射正确，源端为nchar 20位	期望更改为nchar(n)	实际备端为nchar 20位
+[0;32m YES! [0m 	 c_varchar列源备映射正确，源端为varchar 20位	期望更改为varchar(n)	实际备端为varchar 20位
+[0;32m YES! [0m 	 c_nvarchar列源备映射正确，源端为nvarchar 60位	期望更改为nvarchar(n)	实际备端为nvarchar 60位
+[0;32m YES! [0m 	 c_decimal列源备映射正确，源端为decimal None位	期望更改为decimal(p,s)	实际备端为decimal None位
+[0;32m YES! [0m 	 c_datetime列源备映射正确，源端为datetime None位	期望更改为datetime	实际备端为datetime None位
+[0;32m YES! [0m 	 c_numeric列源备映射正确，源端为numeric None位	期望更改为numeric(p,s)	实际备端为numeric None位
+[0;32m YES! [0m 	 c_var400列源备映射正确，源端为varchar 200位	期望更改为varchar(n)	实际备端为varchar 200位
+[0;32m YES! [0m 	 c_char1列源备映射正确，源端为char 1位	期望更改为char(n)	实际备端为char 1位
+当前线程： ThreadPoolExecutor-7_1 正在获取： test2 端内容
+表 test3 开始比对
+[0;34m test3 [0m源备字段数相同，源端字段：10 	备端字段10
+[0;32m YES! [0m 	 no列源备映射正确，源端为int None位	期望更改为int	实际备端为int None位
+[0;32m YES! [0m 	 c_char列源备映射正确，源端为char 5位	期望更改为char(n)	实际备端为char 5位
+[0;32m YES! [0m 	 c_nchar列源备映射正确，源端为nchar 20位	期望更改为nchar(n)	实际备端为nchar 20位
+[0;32m YES! [0m 	 c_varchar列源备映射正确，源端为varchar 20位	期望更改为varchar(n)	实际备端为varchar 20位
+[0;32m YES! [0m 	 c_nvarchar列源备映射正确，源端为nvarchar 60位	期望更改为nvarchar(n)	实际备端为nvarchar 60位
+[0;32m YES! [0m 	 c_decimal列源备映射正确，源端为decimal None位	期望更改为decimal(p,s)	实际备端为decimal None位
+[0;32m YES! [0m 	 c_datetime列源备映射正确，源端为datetime None位	期望更改为datetime	实际备端为datetime None位
+[0;32m YES! [0m 	 c_numeric列源备映射正确，源端为numeric None位	期望更改为numeric(p,s)	实际备端为numeric None位
+[0;32m YES! [0m 	 c_var400列源备映射正确，源端为varchar 200位	期望更改为varchar(n)	实际备端为varchar 200位
+[0;32m YES! [0m 	 c_char1列源备映射正确，源端为char 1位	期望更改为char(n)	实际备端为char 1位
+当前线程： ThreadPoolExecutor-7_2 正在获取： 
+test3 端内容
+表 test4 开始比对
+[0;34m test4 [0m源备字段数相同，源端字段：10 	备端字段10
+[0;32m YES! [0m 	 no列源备映射正确，源端为int None位	期望更改为int	实际备端为int None位
+[0;32m YES! [0m 	 c_char列源备映射正确，源端为char 5位	期望更改为char(n)	实际备端为char 5位
+[0;32m YES! [0m 	 c_nchar列源备映射正确，源端为nchar 20位	期望更改为nchar(n)	实际备端为nchar 20位
+[0;32m YES! [0m 	 c_varchar列源备映射正确，源端为varchar 20位	期望更改为varchar(n)	实际备端为varchar 20位
+[0;32m YES! [0m 	 c_nvarchar列源备映射正确，源端为nvarchar 60位	期望更改为nvarchar(n)	实际备端为nvarchar 60位
+[0;32m YES! [0m 	 c_decimal列源备映射正确，源端为decimal None位	期望更改为decimal(p,s)	实际备端为decimal None位
+[0;32m YES! [0m 	 c_datetime列源备映射正确，源端为datetime None位	期望更改为datetime	实际备端为datetime None位
+[0;32m YES! [0m 	 c_numeric列源备映射正确，源端为numeric None位	期望更改为numeric(p,s)	实际备端为numeric None位
+[0;32m YES! [0m 	 c_var400列源备映射正确，源端为varchar 200位	期望更改为varchar(n)	实际备端为varchar 200位
+[0;32m YES! [0m 	 c_char1列源备映射正确，源端为char 1位	期望更改为char(n)	实际备端为char 1位
+当前线程： ThreadPoolExecutor-7_3 正在获取： test4 端内容
+sqlserver 172.20.72.117 链接耗时:33.002毫秒
+sqlserver 172.20.72.117 链接耗时:35.439毫秒
+sqlserver 172.20.72.117 链接耗时:32.692毫秒
+tgt:test2列信息获取耗时: 93.00毫秒
+当前线程： ThreadPoolExecutor-7_1 
+正在获取： test2 端内容
+tgt:test1列信息获取耗时: 93.00毫秒
+当前线程： ThreadPoolExecutor-7_0 正在获取： test1 端内容
+tgt:test4列信息获取耗时: 78.00毫秒
+当前线程： ThreadPoolExecutor-7_3 正在获取： test4 端内容
+sqlserver 172.20.72.117 链接耗时:31.993毫秒
+sqlserver 172.20.72.117 链接耗时:32.394毫秒
+src:test4列信息获取耗时: 78.00毫秒
+select "no",CONVERT(nvarchar(max),"c_char"),"c_nchar",CONVERT(nvarchar(max),"c_varchar"),"c_nvarchar","c_decimal","c_datetime","c_numeric",CONVERT(nvarchar(max),"c_var400"),CONVERT(nvarchar(max),"c_char1") from [test4]  order by  "no"
+src:test1列信息获取耗时: 78.00毫秒
+select "no",CONVERT(nvarchar(max),"c_char"),"c_nchar",CONVERT(nvarchar(max),"c_varchar"),"c_nvarchar","c_decimal","c_datetime","c_numeric",CONVERT(nvarchar(max),"c_var400"),CONVERT(nvarchar(max),"c_char1") from [test1]  order by  "no"
+sqlserver 172.20.72.117 链接耗时:165.927毫秒
+tgt:test3列信息获取耗时: 203.00毫秒
+当前线程： ThreadPoolExecutor-7_2 
+正在获取： test3 端内容
+select "no",CONVERT(nvarchar(max),"c_char"),"c_nchar",CONVERT(nvarchar(max),"c_varchar"),"c_nvarchar","c_decimal","c_datetime","c_numeric",CONVERT(nvarchar(max),"c_var400"),CONVERT(nvarchar(max),"c_char1") from [test4]  order by  "no"
+select "no",CONVERT(nvarchar(max),"c_char"),"c_nchar",CONVERT(nvarchar(max),"c_varchar"),"c_nvarchar","c_decimal","c_datetime","c_numeric",CONVERT(nvarchar(max),"c_var400"),CONVERT(nvarchar(max),"c_char1") from [test1]  order by  "no"
+sqlserver 172.20.72.117 链接耗时:165.271毫秒
+src:test2列信息获取耗时: 203.00毫秒
+select "no",CONVERT(nvarchar(max),"c_char"),"c_nchar",CONVERT(nvarchar(max),"c_varchar"),"c_nvarchar","c_decimal","c_datetime","c_numeric",CONVERT(nvarchar(max),"c_var400"),CONVERT(nvarchar(max),"c_char1") from [test2]  order by  "no"
+Y 行数相同,源100行,备100行
+YES! hash比对通过
+[]
+表 test4 比对完成，耗时344.00毫秒
+表 test5 开始比对
+[0;34m test5 [0m源备字段数相同，源端字段：10 	备端字段10
+[0;32m YES! [0m 	 no列源备映射正确，源端为int None位	期望更改为int	实际备端为int None位
+[0;32m YES! [0m 	 c_char列源备映射正确，源端为char 5位	期望更改为char(n)	实际备端为char 5位
+[0;32m YES! [0m 	 c_nchar列源备映射正确，源端为nchar 20位	期望更改为nchar(n)	实际备端为nchar 20位
+[0;32m YES! [0m 	 c_varchar列源备映射正确，源端为varchar 20位	期望更改为varchar(n)	实际备端为varchar 20位
+[0;32m YES! [0m 	 c_nvarchar列源备映射正确，源端为nvarchar 60位	期望更改为nvarchar(n)	实际备端为nvarchar 60位
+[0;32m YES! [0m 	 c_decimal列源备映射正确，源端为decimal None位	期望更改为decimal(p,s)	实际备端为decimal None位
+[0;32m YES! [0m 	 c_datetime列源备映射正确，源端为datetime None位	期望更改为datetime	实际备端为datetime None位
+[0;32m YES! [0m 	 c_numeric列源备映射正确，源端为numeric None位	期望更改为numeric(p,s)	实际备端为numeric None位
+[0;32m YES! [0m 	 c_var400列源备映射正确，源端为varchar 200位	期望更改为varchar(n)	实际备端为varchar 200位
+[0;32m YES! [0m 	 c_char1列源备映射正确，源端为char 1位	期望更改为char(n)	实际备端为char 1位
+当前线程： 
+ThreadPoolExecutor-7_3 正在获取： test5 端内容
+Y 行数相同,源100行,备100行
+sqlserver 172.20.72.117 链接耗时:174.884毫秒
+YES! hash比对通过
+[]
+表 test1 比对完成，耗时421.00毫秒
+表 test6 开始比对
+[0;34m test6 [0m源备字段数相同，源端字段：10 	备端字段10
+[0;32m YES! [0m 	 no列源备映射正确，源端为int None位	期望更改为int	实际备端为int None位
+[0;32m YES! [0m 	 c_char列源备映射正确，源端为char 5位	期望更改为char(n)	实际备端为char 5位
+[0;32m YES! [0m 	 c_nchar列源备映射正确，源端为nchar 20位	期望更改为nchar(n)	实际备端为nchar 20位
+[0;32m YES! [0m 	 c_varchar列源备映射正确，源端为varchar 20位	期望更改为varchar(n)	实际备端为varchar 20位
+[0;32m YES! [0m 	 c_nvarchar列源备映射正确，源端为nvarchar 60位	期望更改为nvarchar(n)	实际备端为nvarchar 60位
+[0;32m YES! [0m 	 c_decimal列源备映射正确，源端为decimal None位	期望更改为decimal(p,s)	实际备端为decimal None位
+[0;32m YES! [0m 	 c_datetime列源备映射正确，源端为datetime None位	期望更改为datetime	实际备端为datetime None位
+[0;32m YES! [0m 	 c_numeric列源备映射正确，源端为numeric None位	期望更改为numeric(p,s)	实际备端为numeric None位
+[0;32m YES! [0m 	 c_var400列源备映射正确，源端为varchar 200位	期望更改为varchar(n)	实际备端为varchar 200位
+[0;32m YES! [0m 	 c_char1列源备映射正确，源端为char 1位	期望更改为char(n)	实际备端为char 1位
+当前线程： ThreadPoolExecutor-7_0 正在获取： test6 
+端内容
+tgt:test5列信息获取耗时: 62.00毫秒
+当前线程： ThreadPoolExecutor-7_3 正在获取： test5 端内容
+select "no",CONVERT(nvarchar(max),"c_char"),"c_nchar",CONVERT(nvarchar(max),"c_varchar"),"c_nvarchar","c_decimal","c_datetime","c_numeric",CONVERT(nvarchar(max),"c_var400"),CONVERT(nvarchar(max),"c_char1") from [test2]  order by  "no"
+src:test3列信息获取耗时: 250.00毫秒
+select "no",CONVERT(nvarchar(max),"c_char"),"c_nchar",CONVERT(nvarchar(max),"c_varchar"),"c_nvarchar","c_decimal","c_datetime","c_numeric",CONVERT(nvarchar(max),"c_var400"),CONVERT(nvarchar(max),"c_char1") from [test3]  order by  "no"
+tgt:test6列信息获取耗时: 47.00毫秒
+当前线程： ThreadPoolExecutor-7_0 正在获取： test6 端内容
+src:test5列信息获取耗时: 47.00毫秒
+select "no",CONVERT(nvarchar(max),"c_char"),"c_nchar",CONVERT(nvarchar(max),"c_varchar"),"c_nvarchar","c_decimal","c_datetime","c_numeric",CONVERT(nvarchar(max),"c_var400"),CONVERT(nvarchar(max),"c_char1") from [test5]  order by  "no"
+Y 行数相同,源100行,备100行
+YES! hash比对通过
+[]
+表 test2 比对完成，耗时546.00毫秒
+表 test7 开始比对
+[0;34m test7 [0m源备字段数相同，源端字段：10 	备端字段10
+[0;32m YES! [0m 	 no列源备映射正确，源端为int None位	期望更改为int	实际备端为int None位
+[0;32m YES! [0m 	 c_char列源备映射正确，源端为char 5位	期望更改为char(n)	实际备端为char 5位
+[0;32m YES! [0m 	 c_nchar列源备映射正确，源端为nchar 20位	期望更改为nchar(n)	实际备端为nchar 20位
+[0;32m YES! [0m 	 c_varchar列源备映射正确，源端为varchar 20位	期望更改为varchar(n)	实际备端为varchar 20位
+[0;32m YES! [0m 	 c_nvarchar列源备映射正确，源端为nvarchar 60位	期望更改为nvarchar(n)	实际备端为nvarchar 60位
+[0;32m YES! [0m 	 c_decimal列源备映射正确，源端为decimal None位	期望更改为decimal(p,s)	实际备端为decimal None位
+[0;32m YES! [0m 	 c_datetime列源备映射正确，源端为datetime None位	期望更改为datetime	实际备端为datetime None位
+[0;32m YES! [0m 	 c_numeric列源备映射正确，源端为numeric None位	期望更改为numeric(p,s)	实际备端为numeric None位
+[0;32m YES! [0m 	 c_var400列源备映射正确，源端为varchar 200位	期望更改为varchar(n)	实际备端为varchar 200位
+[0;32m YES! [0m 	 c_char1列源备映射正确，源端为char 1位	期望更改为char(n)	实际备端为char 1位
+当前线程： ThreadPoolExecutor-7_1 正在获取： test7 端内容
+src:test6列信息获取耗时: 94.00毫秒
+select "no",CONVERT(nvarchar(max),"c_char"),"c_nchar",CONVERT(nvarchar(max),"c_varchar"),"c_nvarchar","c_decimal","c_datetime","c_numeric",CONVERT(nvarchar(max),"c_var400"),CONVERT(nvarchar(max),"c_char1") from [test6]  order by  "no"
+select "no",CONVERT(nvarchar(max),"c_char"),"c_nchar",CONVERT(nvarchar(max),"c_varchar"),"c_nvarchar","c_decimal","c_datetime","c_numeric",CONVERT(nvarchar(max),"c_var400"),CONVERT(nvarchar(max),"c_char1") from [test3]  order by  "no"
+select "no",CONVERT(nvarchar(max),"c_char"),"c_nchar",CONVERT(nvarchar(max),"c_varchar"),"c_nvarchar","c_decimal","c_datetime","c_numeric",CONVERT(nvarchar(max),"c_var400"),CONVERT(nvarchar(max),"c_char1") from [test5]  order by  "no"
+select "no",CONVERT(nvarchar(max),"c_char"),"c_nchar",CONVERT(nvarchar(max),"c_varchar"),"c_nvarchar","c_decimal","c_datetime","c_numeric",CONVERT(nvarchar(max),"c_var400"),CONVERT(nvarchar(max),"c_char1") from [test6]  order by  "no"
+tgt:test7列信息获取耗时: 47.00毫秒
+当前线程： ThreadPoolExecutor-7_1 正在获取： test7 端内容
+Y 行数相同,源100行,备100行
+YES! hash比对通过
+[]
+表 test5 比对完成，耗时312.00毫秒
+表 test8 开始比对
+[0;34m test8 [0m源备字段数相同，源端字段：10 	备端字段10
+[0;32m YES! [0m 	 no列源备映射正确，源端为int None位	期望更改为int	实际备端为int None位
+[0;32m YES! [0m 	 c_char列源备映射正确，源端为char 5位	期望更改为char(n)	实际备端为char 5位
+[0;32m YES! [0m 	 c_nchar列源备映射正确，源端为nchar 20位	期望更改为nchar(n)	实际备端为nchar 20位
+[0;32m YES! [0m 	 c_varchar列源备映射正确，源端为varchar 20位	期望更改为varchar(n)	实际备端为varchar 20位
+[0;32m YES! [0m 	 c_nvarchar列源备映射正确，源端为nvarchar 60位	期望更改为nvarchar(n)	实际备端为nvarchar 60位
+[0;32m YES! [0m 	 c_decimal列源备映射正确，源端为decimal None位	期望更改为decimal(p,s)	实际备端为decimal None位
+[0;32m YES! [0m 	 c_datetime列源备映射正确，源端为datetime None位	期望更改为datetime	实际备端为datetime None位
+[0;32m YES! [0m 	 c_numeric列源备映射正确，源端为numeric None位	期望更改为numeric(p,s)	实际备端为numeric None位
+[0;32m YES! [0m 	 c_var400列源备映射正确，源端为varchar 200位	期望更改为varchar(n)	实际备端为varchar 200位
+[0;32m YES! [0m 	 c_char1列源备映射正确，源端为char 1位	期望更改为char(n)	实际备端为char 1位
+当前线程： ThreadPoolExecutor-7_3 正在获取： test8 端内容
+src:test7列信息获取耗时: 78.00毫秒
+select "no",CONVERT(nvarchar(max),"c_char"),"c_nchar",CONVERT(nvarchar(max),"c_varchar"),"c_nvarchar","c_decimal","c_datetime","c_numeric",CONVERT(nvarchar(max),"c_var400"),CONVERT(nvarchar(max),"c_char1") from [test7]  order by  "no"
+Y 行数相同,源100行,备100行
+YES! hash比对通过
+[]
+表 test3 比对完成，耗时718.00毫秒
+表 test9 开始比对
+[0;34m test9 [0m源备字段数相同，源端字段：10 	备端字段10
+[0;32m YES! [0m 	 no列源备映射正确，源端为int None位	期望更改为int	实际备端为int None位
+[0;32m YES! [0m 	 c_char列源备映射正确，源端为char 5位	期望更改为char(n)	实际备端为char 5位
+[0;32m YES! [0m 	 c_nchar列源备映射正确，源端为nchar 20位	期望更改为nchar(n)	实际备端为nchar 20位
+[0;32m YES! [0m 	 c_varchar列源备映射正确，源端为varchar 20位	期望更改为varchar(n)	实际备端为varchar 20位
+[0;32m YES! [0m 	 c_nvarchar列源备映射正确，源端为nvarchar 60位	期望更改为nvarchar(n)	实际备端为nvarchar 60位
+[0;32m YES! [0m 	 c_decimal列源备映射正确，源端为decimal None位	期望更改为decimal(p,s)	实际备端为decimal None位
+[0;32m YES! [0m 	 c_datetime列源备映射正确，源端为datetime None位	期望更改为datetime	实际备端为datetime None位
+[0;32m YES! [0m 	 c_numeric列源备映射正确，源端为numeric None位	期望更改为numeric(p,s)	实际备端为numeric None位
+[0;32m YES! [0m 	 c_var400列源备映射正确，源端为varchar 200位	期望更改为varchar(n)	实际备端为varchar 200位
+[0;32m YES! [0m 	 c_char1列源备映射正确，源端为char 1位	期望更改为char(n)	实际备端为char 1位
+当前线程： ThreadPoolExecutor-7_2 正在获取： test9 端内容
+tgt:test8列信息获取耗时: 63.00毫秒
+当前线程： ThreadPoolExecutor-7_3 正在获取： test8 端内容
+Y 行数相同,源100行,备100行
+YES! hash比对通过
+[]
+表 test6 比对完成，耗时375.00毫秒
+表 test10 开始比对
+[0;34m test10 [0m源备字段数相同，源端字段：10 	备端字段10
+[0;32m YES! [0m 	 no列源备映射正确，源端为int None位	期望更改为int	实际备端为int None位
+[0;32m YES! [0m 	 c_char列源备映射正确，源端为char 5位	期望更改为char(n)	实际备端为char 5位
+[0;32m YES! [0m 	 c_nchar列源备映射正确，源端为nchar 20位	期望更改为nchar(n)	实际备端为nchar 20位
+[0;32m YES! [0m 	 c_varchar列源备映射正确，源端为varchar 20位	期望更改为varchar(n)	实际备端为varchar 20位
+[0;32m YES! [0m 	 c_nvarchar列源备映射正确，源端为nvarchar 60位	期望更改为nvarchar(n)	实际备端为nvarchar 60位
+[0;32m YES! [0m 	 c_decimal列源备映射正确，源端为decimal None位	期望更改为decimal(p,s)	实际备端为decimal None位
+[0;32m YES! [0m 	 c_datetime列源备映射正确，源端为datetime None位	期望更改为datetime	实际备端为datetime None位
+[0;32m YES! [0m 	 c_numeric列源备映射正确，源端为numeric None位	期望更改为numeric(p,s)	实际备端为numeric None位
+[0;32m YES! [0m 	 c_var400列源备映射正确，源端为varchar 200位	期望更改为varchar(n)	实际备端为varchar 200位
+[0;32m YES! [0m 	 c_char1列源备映射正确，源端为char 1位	期望更改为char(n)	实际备端为char 1位
+当前线程： ThreadPoolExecutor-7_0 正在获取： test10 端内容
+src:test8列信息获取耗时: 62.00毫秒
+tgt:test9列信息获取耗时: 78.00毫秒
+当前线程： ThreadPoolExecutor-7_2 
+正在获取： test9 端内容
+select "no",CONVERT(nvarchar(max),"c_char"),"c_nchar",CONVERT(nvarchar(max),"c_varchar"),"c_nvarchar","c_decimal","c_datetime","c_numeric",CONVERT(nvarchar(max),"c_var400"),CONVERT(nvarchar(max),"c_char1") from [test8]  order by  "no"
+select "no",CONVERT(nvarchar(max),"c_char"),"c_nchar",CONVERT(nvarchar(max),"c_varchar"),"c_nvarchar","c_decimal","c_datetime","c_numeric",CONVERT(nvarchar(max),"c_var400"),CONVERT(nvarchar(max),"c_char1") from [test7]  order by  "no"
+select "no",CONVERT(nvarchar(max),"c_char"),"c_nchar",CONVERT(nvarchar(max),"c_varchar"),"c_nvarchar","c_decimal","c_datetime","c_numeric",CONVERT(nvarchar(max),"c_var400"),CONVERT(nvarchar(max),"c_char1") from [test8]  order by  "no"
+Y 行数相同,源100行,备100行
+YES! hash比对通过
+[]
+表 test7 比对完成，耗时344.00毫秒
+src:test9列信息获取耗时: 94.00毫秒
+select "no",CONVERT(nvarchar(max),"c_char"),"c_nchar",CONVERT(nvarchar(max),"c_varchar"),"c_nvarchar","c_decimal","c_datetime","c_numeric",CONVERT(nvarchar(max),"c_var400"),CONVERT(nvarchar(max),"c_char1") from [test9]  order by  "no"
+tgt:test10列信息获取耗时: 94.00毫秒
+当前线程： ThreadPoolExecutor-7_0 正在获取： test10 端内容
+Y 行数相同,源100行,备100行
+YES! hash比对通过
+
+[]
+表 test8 比对完成，耗时282.00毫秒
+src:test10列信息获取耗时: 63.00毫秒
+select "no",CONVERT(nvarchar(max),"c_char"),"c_nchar",CONVERT(nvarchar(max),"c_varchar"),"c_nvarchar","c_decimal","c_datetime","c_numeric",CONVERT(nvarchar(max),"c_var400"),CONVERT(nvarchar(max),"c_char1") from [test10]  order by  "no"
+select "no",CONVERT(nvarchar(max),"c_char"),"c_nchar",CONVERT(nvarchar(max),"c_varchar"),"c_nvarchar","c_decimal","c_datetime","c_numeric",CONVERT(nvarchar(max),"c_var400"),CONVERT(nvarchar(max),"c_char1") from [test9]  order by  "no"
+select "no",CONVERT(nvarchar(max),"c_char"),"c_nchar",CONVERT(nvarchar(max),"c_varchar"),"c_nvarchar","c_decimal","c_datetime","c_numeric",CONVERT(nvarchar(max),"c_var400"),CONVERT(nvarchar(max),"c_char1") from [test10]  order by  "no"
+Y 行数相同,源100行,备100行
+YES! hash比对通过
+[]
+表 test9 比对完成，耗时344.00毫秒
+Y 行数相同,源100行,备100行
+YES! hash比对通过
+
+[]
+表 test10 比对完成，耗时313.00毫秒
+总耗时2328.00毫秒
+结果存至 2026042602sqlserver1 工作表
+恢复输出流
+subprocess done
+记录report和规则关系到表

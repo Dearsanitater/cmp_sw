@@ -6,4 +6,5 @@ resource/test_report/report.xlsx
 .codex_daphne_8001.err.log
 *.log
 /.vscode/
+/.idea/
 .codex_daphne_8001.log

@@ -197,7 +197,7 @@ def _rule(rule_id):
         "error_handler": row["error_handler"],
     }
 
-
+#收到任务，写库
 def _create_compare_job(rule_id, command="start"):
     rule = _rule(rule_id)
     if rule is None:

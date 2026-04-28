@@ -41,6 +41,7 @@ def _mysql_settings():
 @contextmanager
 def _mysql_conn():
     conn = pymysql.connect(**_mysql_settings())
+    print('mysql已连接')
     try:
         yield conn
     finally:

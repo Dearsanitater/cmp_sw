@@ -374,7 +374,11 @@ def _std_xml(value):
         return ET.tostring(root, encoding="unicode")
     except Exception:
         return raw
-def std_cell(value, col_type="other"):
+def _apply_case_mode(text, ignore_case=False):
+    return text.upper() if ignore_case else text
+
+
+def std_cell(value, col_type="other", ignore_case=False):
     col_type = _normalize_col_type(col_type)
     kind = data_dict.get(col_type, col_type if col_type in ("string", "number", "datetime", "binary", "spatial", "xml", "other") else "other")
     if isinstance(value, cx_Oracle.LOB):
@@ -384,15 +388,15 @@ def std_cell(value, col_type="other"):
     if isinstance(value, numpy.generic):
         value = value.item()
     if isinstance(value, (list, tuple)):
-        return "[" + ",".join(std_cell(item, col_type) for item in value) + "]"
+        return _apply_case_mode("[" + ",".join(std_cell(item, col_type, ignore_case=ignore_case) for item in value) + "]", ignore_case)
     if isinstance(value, dict):
-        return "{" + ",".join(f"{std_cell(k, col_type)}:{std_cell(v, col_type)}" for k, v in sorted(value.items(), key=lambda item: str(item[0]))) + "}"
+        return _apply_case_mode("{" + ",".join(f"{std_cell(k, col_type, ignore_case=ignore_case)}:{std_cell(v, col_type, ignore_case=ignore_case)}" for k, v in sorted(value.items(), key=lambda item: str(item[0]))) + "}", ignore_case)
     if value is None or value == "" or value is pandas.NaT:
         return ""
     if isinstance(value, float) and numpy.isnan(value):
         return ""
     if kind == "xml":
-        return _std_xml(value)
+        return _apply_case_mode(_std_xml(value), ignore_case)
     if col_type in ("float", "real"):
         return _std_float(value)
     if col_type == "sql_variant" and isinstance(value, str):
@@ -401,7 +405,7 @@ def std_cell(value, col_type="other"):
             return ""
         parsed = _std_sql_variant_temporal(raw)
         if parsed is not None:
-            return parsed
+            return _apply_case_mode(parsed, ignore_case)
     if kind == "datetime":
         return _std_datetime(value)
     if kind == "binary":
@@ -439,7 +443,7 @@ def std_cell(value, col_type="other"):
         if compact == "":
             return ""
         if kind == "string":
-            return raw
+            return _apply_case_mode(raw, ignore_case)
         if kind == "binary":
             return raw.upper()
         if kind == "number" and NUMERIC_RE.match(compact):
@@ -450,9 +454,9 @@ def std_cell(value, col_type="other"):
             except Exception:
                 pass
         cleaned = CELL_CLEAN_RE.sub("", compact if kind != "string" else raw).upper()
-        return cleaned
-    return str(value)
-def hash_compare(s, t,col_type_list :list,tbname):
+        return _apply_case_mode(cleaned, ignore_case)
+    return _apply_case_mode(str(value), ignore_case)
+def hash_compare(s, t,col_type_list :list,tbname,ignore_case=False):
     messages = []
     errors = []
     src_hashes = []
@@ -469,7 +473,7 @@ def hash_compare(s, t,col_type_list :list,tbname):
 
     for i in range(s.shape[0]):
         raw_row = [s.iloc[i, j] for j in range(s.shape[1])]
-        src_row = [std_cell(raw_row[j], col_type_list[j] if j < len(col_type_list) else "other") for j in active_indexes]
+        src_row = [std_cell(raw_row[j], col_type_list[j] if j < len(col_type_list) else "other", ignore_case=ignore_case) for j in active_indexes]
         src_hasher = hashlib.blake2b(digest_size=16)
         for cell in src_row:
             cell_bytes = cell.encode("utf-8", errors="replace")
@@ -486,7 +490,7 @@ def hash_compare(s, t,col_type_list :list,tbname):
 
     for i in range(t.shape[0]):
         tgt_raw_row = [t.iloc[i, j] for j in range(t.shape[1])]
-        tgt_row = [std_cell(tgt_raw_row[j], col_type_list[j] if j < len(col_type_list) else "other") for j in active_indexes]
+        tgt_row = [std_cell(tgt_raw_row[j], col_type_list[j] if j < len(col_type_list) else "other", ignore_case=ignore_case) for j in active_indexes]
         tgt_hasher = hashlib.blake2b(digest_size=16)
         for cell in tgt_row:
             cell_bytes = cell.encode("utf-8", errors="replace")
@@ -532,7 +536,7 @@ def hash_compare(s, t,col_type_list :list,tbname):
     }
 
 
-def hash_compare_rows(src_rows, tgt_rows, col_type_list: list, tbname, src_col_count=None, tgt_col_count=None):
+def hash_compare_rows(src_rows, tgt_rows, col_type_list: list, tbname, src_col_count=None, tgt_col_count=None, ignore_case=False):
     messages = []
     errors = []
     src_hashes = []
@@ -557,7 +561,7 @@ def hash_compare_rows(src_rows, tgt_rows, col_type_list: list, tbname, src_col_c
 
     for raw_row in src_rows:
         raw_row = list(raw_row)
-        src_row = [std_cell(raw_row[j], col_type_list[j] if j < len(col_type_list) else "other") for j in active_indexes]
+        src_row = [std_cell(raw_row[j], col_type_list[j] if j < len(col_type_list) else "other", ignore_case=ignore_case) for j in active_indexes]
         src_hasher = hashlib.blake2b(digest_size=16)
         for cell in src_row:
             cell_bytes = cell.encode("utf-8", errors="replace")
@@ -574,7 +578,7 @@ def hash_compare_rows(src_rows, tgt_rows, col_type_list: list, tbname, src_col_c
 
     for tgt_raw_row in tgt_rows:
         tgt_raw_row = list(tgt_raw_row)
-        tgt_row = [std_cell(tgt_raw_row[j], col_type_list[j] if j < len(col_type_list) else "other") for j in active_indexes]
+        tgt_row = [std_cell(tgt_raw_row[j], col_type_list[j] if j < len(col_type_list) else "other", ignore_case=ignore_case) for j in active_indexes]
         tgt_hasher = hashlib.blake2b(digest_size=16)
         for cell in tgt_row:
             cell_bytes = cell.encode("utf-8", errors="replace")

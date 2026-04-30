@@ -15,6 +15,7 @@ def main():
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--batch-size", type=int, default=1000)
     parser.add_argument("--skip-data", action="store_true")
+    parser.add_argument("--tgt-uppercase", "--ignore-case", dest="tgt_uppercase", action="store_true")
 
     args = parser.parse_args()
 
@@ -26,6 +27,7 @@ def main():
         workers=args.workers,
         batch_size=args.batch_size,
         compare_rows=not args.skip_data,
+        tgt_uppercase=args.tgt_uppercase,
     )
     start=time.monotonic()
     CompareJobRunner(job).run()

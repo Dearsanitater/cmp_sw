@@ -120,6 +120,11 @@ class ergodic_database():
         db_key = self.src_db if role == 'src' else self.tgt_db
         return load_config(db_key).schema
 
+    def _table_name_for_role(self, table_name, role):
+        if role == 'tgt' and getattr(self, 'tgt_uppercase', False):
+            return str(table_name).upper()
+        return table_name
+
     def _acquire_compare_connector(self, role):
         pool = getattr(self, f'{role}_pool', None)
         if pool is not None:
@@ -192,6 +197,7 @@ class ergodic_database():
         broken = False
         try:
             schema = self._schema_name(role)
+            table_name = self._table_name_for_role(table_name, role)
             columns = connector.get_columns(table_name, schema)
             return self._normalize_table_snapshot(0, table_name, columns)['tab_col']
         except Exception:
@@ -760,7 +766,7 @@ class ergodic_database():
                     connector = self._acquire_compare_connector(role)
                 schema = self._schema_name(role)
                 try:
-                    return connector.get_obj(table_name, schema, col_num=col_num)
+                    return connector.get_obj(self._table_name_for_role(table_name, role), schema, col_num=col_num)
                 finally:
                     if owns_connector:
                         self._release_compare_connector(role, connector)
@@ -1451,7 +1457,7 @@ class ergodic_database():
 
                 tgt_rows = []
                 for batch in tgt_connector.get_row(
-                    tbname,
+                    self._table_name_for_role(tbname, 'tgt'),
                     tgcol,
                     batch_size=getattr(self, 'batch_size', 1000),
                     schema=self._schema_name('tgt'),
@@ -1475,6 +1481,7 @@ class ergodic_database():
                         tbname,
                         src_col_count=src_col_count,
                         tgt_col_count=tgt_col_count,
+                        ignore_case=getattr(self, 'tgt_uppercase', False),
                     )['errors']
                 elif src_row_count != 0 and tgt_row_count != 0 and src_row_count != tgt_row_count and src_col_count == tgt_col_count:
                     message = f"NO! row_count_diff src={src_row_count} tgt={tgt_row_count}"
@@ -1533,34 +1540,35 @@ class ergodic_database():
         row=[]
         #print(sql)
 
+        tgt_tbname = self._table_name_for_role(tbname, 'tgt')
         if self.conf_tgt=='sqlserver':
-            a=self.mss_spc(tgcol,tbname)
+            a=self.mss_spc(tgcol,tgt_tbname)
         elif self.conf_tgt=='mysql':
-            a=f"""select * from `{tbname.lower()}`"""
-        elif self.conf_tgt=='oracle':a=f'''select * from "{tbname.upper()}"''';odsql=odsql.upper()
+            a=f"""select * from `{tgt_tbname if getattr(self, 'tgt_uppercase', False) else tbname.lower()}`"""
+        elif self.conf_tgt=='oracle':a=f'''select * from "{tgt_tbname.upper()}"''';odsql=odsql.upper()
         elif self.conf_tgt=='elastic':
             host = config2.get('elastic', 'host')
             port = config2.get('elastic', 'port')
             schema = config2.get('elastic', 'schema')  # 赋值schema
-            tgt_cur=requests.get(f"http://{host}:{port}/i2import_{schema.lower()}_{tbname.lower()}/_search").json()
+            tgt_cur=requests.get(f"http://{host}:{port}/i2import_{schema.lower()}_{tgt_tbname.lower()}/_search").json()
         elif self.tgt_db_t not in ('mysql','dm','hive','hdfs','hbase') and not self.tgt_db_t.endswith('gbk'):
-            a='%s' % config.get('sqlserver', 'row') + " " + tbname
+            a='%s' % config.get('sqlserver', 'row') + " " + tgt_tbname
         elif self.tgt_db_t.endswith('gbk'):
             b = "set client_encoding to 'GBK';"
             tgt_cur.execute(b)
-            a = '%s' % config.get('sqlserver', 'row') + " " + tbname
+            a = '%s' % config.get('sqlserver', 'row') + " " + tgt_tbname
         elif self.conf_tgt=='dm':
-            a=config.get('dm','select').format(schema=config2.get('dm','databasename'),tbname=tbname.upper())
+            a=config.get('dm','select').format(schema=config2.get('dm','databasename'),tbname=tgt_tbname.upper())
         elif self.conf_tgt=='hive':
-            ob=','.join(self.tgt_pri[f'{tbname.lower()}'])
-            a=config.get('hive','row').format(dbname=config2.get('hive','databasename'),tbname=tbname,ob=ob)
+            ob=','.join(self.tgt_pri[f'{tgt_tbname.lower()}'])
+            a=config.get('hive','row').format(dbname=config2.get('hive','databasename'),tbname=tgt_tbname,ob=ob)
         elif self.conf_tgt=='hdfs':
-            tbname=f'//{tbname}//{tbname}.parquet'
-            Pyarrow_tname=config2.get('hdfs','local_dir')+config2.get('hdfs','schema')+tbname
+            hdfs_tbname=f'//{tgt_tbname}//{tgt_tbname}.parquet'
+            Pyarrow_tname=config2.get('hdfs','local_dir')+config2.get('hdfs','schema')+hdfs_tbname
         elif self.conf_tgt=='hbase':
             hc=self.conn_tgt_cur
         #else : a='%s' % config.get('sqlserver', 'row') + " [" +f'{tbname.lower()}' + "] " + 'order by 1 asc'
-        else: a=f"""select * from {tbname.lower()} """
+        else: a=f"""select * from {tgt_tbname if getattr(self, 'tgt_uppercase', False) else tbname.lower()} """
         if self.conf_tgt not in ('elastic','hdfs','sqlserver','hbase'):
             print(a+odsql)
             tgt_cur.execute(a+odsql)
@@ -1575,7 +1583,7 @@ class ergodic_database():
             t = pandas.DataFrame(xxx)
         elif self.conf_tgt=='hbase':
             #hc传tbcol，按照源库顺序扫描，直接复制到dataframe，返回dataframe
-            t=hc.scan_one_tb(tbname,tbcol)
+            t=hc.scan_one_tb(tgt_tbname,tbcol)
         else:#如果是hdfs的parquet文件，先预处理成dataframe
             t=self.pretreatment_hdfs(Pyarrow_tname)
             pass
@@ -1593,7 +1601,7 @@ class ergodic_database():
                 pass
             
             #hash比较
-            err=standard.hash_compare(s,t,[colType['type'] for colType in tbcol],tbname)['errors']
+            err=standard.hash_compare(s,t,[colType['type'] for colType in tbcol],tbname,ignore_case=getattr(self, 'tgt_uppercase', False))['errors']
         elif len(s)!=0 and len(t)!=0 and s.shape[0]!=t.shape[0] and s.shape[1]==t.shape[1]:
             print('NO! 行数不同,源%d行,备%d行'%(s.shape[0],t.shape[0]));self.bfe.append('NO! 行数不同,源%d行,备%d行'%(len(s[0]),len(t[0])))
         elif len(s)!=0 and len(t)!=0 and len(s[0])==len(t[0]) and s.shape[1]!=t.shape[1]:
@@ -1636,8 +1644,8 @@ class ergodic_database():
                 else:
                     self.type_cache[col['type']] = '''cast("{col_name}" as nvarchar(max))'''
                     f.append(f"{self.type_cache[col['type']]}".format(col_name=col['col_name']));i+=1
-            elif col['col_name'] in ('datetime2','datetimesofffset','time'):
-                    self.type_cache[col['type']] = '''cast("{col_name}" as datetime)'''
+            elif col['type'] in ('datetime2','datetimeoffset','time'):
+                    self.type_cache[col['type']] = '''CONVERT(nvarchar(max),"{col_name}")'''
                     f.append(f"{self.type_cache[col['type']]}".format(col_name=col['col_name']));i+=1
             # elif col['type'].startswith('sql_variant'):
             #     self.type_cache[col['type']] = '''convert(nvarchar(max),"{col_name}",120)'''
@@ -1915,10 +1923,11 @@ class ergodic_database():
                 elif b == 'x':
                     break
                 else:print('重新输入')
-    def compare(self,src,tgt,err_handling,if_cpdata,control=None):
+    def compare(self,src,tgt,err_handling,if_cpdata,control=None,tgt_uppercase=False,ignore_case=None):
         #源备库设置
         #src='sqlserver';tgt='postgre';err_handling=3;if_cpdata:0 是否内容比较(部分链路不支持)
         self.set_control(control)
+        self.tgt_uppercase = tgt_uppercase if ignore_case is None else ignore_case
         self.src_db=src
         self.tgt_db=tgt
         self.src_db_t = config2.get(f'{self.src_db}', 'type')#根据输入的数据库具体名找config中对应的type值，可加try优化报错

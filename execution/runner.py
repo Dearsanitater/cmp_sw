@@ -42,6 +42,8 @@ class CompareJobRunner:
             worker.tgt_schema = getattr(self.job, "tgt_schema", None)
             worker.workers = getattr(self.job, "workers", 4)
             worker.batch_size = getattr(self.job, "batch_size", 1000)
+            tgt_uppercase = getattr(self.job, "tgt_uppercase", getattr(self.job, "ignore_case", False))
+            worker.tgt_uppercase = tgt_uppercase
 
             err_handling = getattr(self.job, "err_handling", 3)
             if_cpdata = 1 if getattr(self.job, "compare_rows", True) else 0
@@ -53,6 +55,7 @@ class CompareJobRunner:
                 err_handling,
                 if_cpdata,
                 control=control,
+                tgt_uppercase=tgt_uppercase,
             )
             return worker
         finally:

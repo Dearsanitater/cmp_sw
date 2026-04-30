@@ -13,5 +13,6 @@ class CompareJob:
     workers: int = 4
     batch_size: int = 1000
     compare_rows: bool = True
+    tgt_uppercase: bool = False
     report_dir: str = "resource/test_report"
     job_id: str = field(default_factory=lambda: str(uuid.uuid4()))

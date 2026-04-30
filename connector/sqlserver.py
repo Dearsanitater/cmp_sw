@@ -281,7 +281,7 @@ class SqlServerConnector(BaseConnector):
                     fields.append(self.type_cache[col_type].format(col_name=col_name))
                 converted_count += 1
             elif col_type in ("datetime2", "datetimeoffset", "time"):
-                self.type_cache[col_type] = 'cast("{col_name}" as datetime)'
+                self.type_cache[col_type] = 'CONVERT(nvarchar(max),"{col_name}")'
                 fields.append(self.type_cache[col_type].format(col_name=col_name))
                 converted_count += 1
             elif "offset" in col_type:

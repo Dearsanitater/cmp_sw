@@ -41,7 +41,7 @@ def _mysql_settings():
 @contextmanager
 def _mysql_conn():
     conn = pymysql.connect(**_mysql_settings())
-    print('mysql已连接')
+
     try:
         yield conn
     finally:
@@ -55,7 +55,7 @@ def _execute(sql, args=None):
             return cursor
 
 
-def _ensure_tables():
+def _ensure_tables():#确认mysql中是否有表，无则新建
     statements = [
         """
         CREATE TABLE IF NOT EXISTS compare_rule (
